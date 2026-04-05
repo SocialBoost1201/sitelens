@@ -1,0 +1,220 @@
+// SiteLens — Prisma Schema
+// Status: Migration-ready. All pre-migration gaps resolved.
+// See docs/03_detail_design/Doc-03_DatabaseDetailDesign_v0.1.md for design decisions.
+// Run `npx prisma migrate dev --name init` only after Supabase is provisioned and
+// DIRECT_URL + DATABASE_URL are set in .env.local.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7.x: datasource URL is NOT configured here.
+// Connection URLs are resolved in prisma.config.ts (CLI) and via the pg adapter at runtime.
+// See: https://pris.ly/d/config-datasource
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Project — a website registered for auditing
+// Gap 6 resolved: renamed from Site → Project. siteId → projectId on relations.
+// Foreign key to Supabase auth.users is enforced via RLS, not a Prisma FK.
+// ---------------------------------------------------------------------------
+model Project {
+  id        String   @id @default(cuid())
+  url       String
+  name      String
+  // userId references Supabase auth.users.id (UUID string).
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditRuns     AuditRun[]
+  alertRules    AlertRule[]
+  members       ProjectMember[]
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// AuditRun — a single audit execution for a project
+// ---------------------------------------------------------------------------
+model AuditRun {
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status       AuditStatus @default(PENDING)
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  // Gap 5: errorMessage records the failure reason on FAILED runs (FR-24).
+  errorMessage String?
+  // Gap 2: rawData stores the raw source API response as JSON (FR-21, NFR-30).
+  // MVP: stores the full PageSpeed Insights API response object.
+  // Retention target: 90 days minimum (NFR-31).
+  rawData      Json?
+  createdAt    DateTime    @default(now())
+
+  metrics     Metric[]
+  findings    Finding[]
+  violations  AlertViolation[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+enum AuditStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Metric — a normalized key/value result from an audit run
+// ---------------------------------------------------------------------------
+model Metric {
+  id         String   @id @default(cuid())
+  auditRunId String
+  auditRun   AuditRun @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  // key examples: "performance", "accessibility", "lcp", "cls", "inp", "fcp", "tbt"
+  key        String
+  value      Float
+  // unit examples: "score", "ms", "s", "count", "ratio"
+  unit       String?
+  // Canonical source tag values: "pagespeed-insights" (MVP), "search-console" (V1)
+  source     String
+  createdAt  DateTime @default(now())
+
+  @@index([auditRunId])
+  @@index([key, source])
+}
+
+// ---------------------------------------------------------------------------
+// Finding — a structured issue, warning, or passed check from an audit run
+// Gap 3 resolved: new model for FR-40–43.
+// ---------------------------------------------------------------------------
+model Finding {
+  id           String          @id @default(cuid())
+  auditRunId   String
+  auditRun     AuditRun        @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  // key is the Lighthouse audit ID, e.g., "uses-optimized-images", "largest-contentful-paint"
+  key          String
+  // title is the human-readable audit name, e.g., "Properly size images"
+  title        String
+  severity     FindingSeverity
+  category     FindingCategory
+  // Canonical source tag values: "pagespeed-insights" (MVP), "search-console" (V1)
+  source       String
+  // status is null on the first run for a project (no comparison baseline available).
+  // Set on subsequent runs by comparing this run's findings against the previous run.
+  status       FindingStatus?
+  // displayValue is the Lighthouse-provided human-readable measured value,
+  // e.g., "2.0 s" for LCP, "1,200 KiB" for image sizes. Optional.
+  displayValue String?
+  createdAt    DateTime        @default(now())
+
+  @@index([auditRunId])
+  @@index([auditRunId, severity])
+  @@index([auditRunId, category])
+}
+
+enum FindingSeverity {
+  CRITICAL // Failing: score < 0.5 or equivalent Lighthouse "poor" threshold
+  WARNING  // Needs improvement: score 0.5–0.89 or equivalent
+  INFO     // Informative or not-applicable: no binary pass/fail score
+  PASSED   // Passing: score >= 0.9 or equivalent
+}
+
+enum FindingCategory {
+  PERFORMANCE
+  ACCESSIBILITY
+  BEST_PRACTICES
+  SEO
+  STRUCTURED_DATA // Used for V1 Rich Results / structured data validation findings
+}
+
+enum FindingStatus {
+  NEW       // Failing in this run; was absent or PASSED in the previous run
+  RECURRING // Failing in this run; was also failing in the previous run
+  RESOLVED  // PASSED in this run; was failing in the previous run
+}
+
+// ---------------------------------------------------------------------------
+// AlertRule — threshold alert configuration per project
+// Gap 4 resolved: AlertOperator enum added (OQ-09).
+// ---------------------------------------------------------------------------
+model AlertRule {
+  id        String        @id @default(cuid())
+  projectId String
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // metric matches a Metric.key value, e.g., "performance", "lcp", "cls"
+  metric    String
+  // operator determines alert direction (Gap 4 / OQ-09):
+  //   BELOW: alert when value < threshold  (score-based metrics, e.g., performance < 80)
+  //   ABOVE: alert when value > threshold  (latency metrics, e.g., lcp > 2500)
+  operator  AlertOperator @default(BELOW)
+  threshold Float
+  enabled    Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+
+  violations AlertViolation[]
+
+  @@index([projectId])
+}
+
+enum AlertOperator {
+  BELOW // Alert fires when metric value < threshold
+  ABOVE // Alert fires when metric value > threshold
+}
+
+// ---------------------------------------------------------------------------
+// AlertViolation — a recorded breach of an AlertRule on a specific AuditRun
+// T-13 resolved: dedicated model chosen over inline AuditRun field.
+// Fields snapshot the rule's metric/threshold/operator at violation time so
+// that later edits to the AlertRule do not corrupt the historical record.
+// Writes are pipeline-only (service role). No user INSERT needed.
+// ---------------------------------------------------------------------------
+model AlertViolation {
+  id           String        @id @default(cuid())
+  auditRunId   String
+  auditRun     AuditRun      @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  alertRuleId  String
+  alertRule    AlertRule     @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
+  // Snapshot fields — preserve rule state at violation time
+  metricKey    String
+  actualValue  Float
+  threshold    Float
+  operator     AlertOperator
+  createdAt    DateTime      @default(now())
+
+  @@index([auditRunId])
+  @@index([alertRuleId])
+}
+
+// ---------------------------------------------------------------------------
+// ProjectMember — invitation-based access for Analyst and Viewer roles
+// The project owner (Project.userId) is NOT in this table; they have full
+// access via the owner-based RLS policies. This table tracks invited members.
+// ProjectRole.ANALYST: full read/write on project data, cannot manage workspace.
+// ProjectRole.VIEWER: read-only access to assigned projects.
+// @@unique ensures one role per (project, user) combination.
+// ---------------------------------------------------------------------------
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String      // Supabase auth.users.id (UUID string)
+  role      ProjectRole
+  // invitedBy records who granted access; used for audit trail only.
+  invitedBy String
+  createdAt DateTime    @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+enum ProjectRole {
+  ANALYST // Full read/write on project data; cannot manage workspace settings
+  VIEWER  // Read-only access to assigned project data
+}
