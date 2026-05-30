@@ -1,20 +1,26 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import type { LucideIcon } from "lucide-react"
-
+import { Gauge, BarChart2, Eye, ShieldCheck, type LucideIcon } from "lucide-react"
+t
 interface ScoreRingProps {
   value: number | undefined
   label: string
-  icon: LucideIcon
+  icon: string
 }
-
+const ICON_MAP: Record<string, LucideIcon> = {
+  performance: Gauge,
+  seo: BarChart2,
+  accessibility: Eye,
+  "best-practices": ShieldCheck,
+}
 /** ease-out curve: t → 1 - (1-t)^3 */
 function easeOut(t: number): number {
   return 1 - Math.pow(1 - t, 3)
 }
 
-export function ScoreRing({ value, label, icon: Icon }: ScoreRingProps) {
+export function ScoreRing({ value, label, icon }: ScoreRingProps) {
+  const Icon = ICON_MAP[icon] ?? Gauge
   const [display, setDisplay] = useState(0)
   const rafRef = useRef<number | null>(null)
   const DURATION = 1200 // ms — design-spec P0
