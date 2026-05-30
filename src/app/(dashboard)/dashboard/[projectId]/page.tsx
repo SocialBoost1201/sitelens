@@ -16,10 +16,6 @@ import {
   Calendar,
   Timer,
   TrendingUp,
-  BarChart2,
-  ShieldCheck,
-  Gauge,
-  Eye,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import {
@@ -268,10 +264,10 @@ export default async function ProjectDetailPage({
             Audit Scores
           </p>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-            <ScoreRing value={scoreMap["performance"]}   label="Performance"   icon"performance" />
-            <ScoreRing value={scoreMap["seo"]}           label="SEO"           icon="seo" />
-            <ScoreRing value={scoreMap["accessibility"]} label="Accessibility" icon="accessibility"//>
-            <ScoreRing value={scoreMap["best-practices"]} label="Best Practices" icon="best-practice" />
+            <ScoreRing value={scoreMap["performance"]}    label="Performance"    icon="performance" />
+            <ScoreRing value={scoreMap["seo"]}            label="SEO"            icon="seo" />
+            <ScoreRing value={scoreMap["accessibility"]}  label="Accessibility"  icon="accessibility" />
+            <ScoreRing value={scoreMap["best-practices"]} label="Best Practices" icon="best-practices" />
           </div>
 
           {/* Last audit */}

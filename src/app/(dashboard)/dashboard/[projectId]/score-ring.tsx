@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Gauge, BarChart2, Eye, ShieldCheck, type LucideIcon } from "lucide-react"
-t
+
 interface ScoreRingProps {
   value: number | undefined
   label: string
