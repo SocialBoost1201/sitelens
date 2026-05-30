@@ -1,67 +1,22 @@
 // SiteLens — Prisma Schema
-// Status: Migration-ready. All pre-migration gaps resolved.
-// See docs/03_detail_design/Doc-03_DatabaseDetailDesign_v0.1.md for design decisions.
-// Run `npx prisma migrate dev --name init` only after Supabase is provisioned and
-// DIRECT_URL + DATABASE_URL are set in .env.local.
+// Source of truth for ORM types. DDL is managed by Supabase migrations.
+// After any Supabase migration, run:  npx prisma generate
+// Do NOT run `prisma migrate dev` — use the Supabase migration system for DDL.
 
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
 }
 
-// Prisma 7.x: datasource URL is NOT configured here.
-// Connection URLs are resolved in prisma.config.ts (CLI) and via the pg adapter at runtime.
-// See: https://pris.ly/d/config-datasource
+// Datasource URL is resolved at CLI time by prisma.config.ts (DIRECT_URL → DATABASE_URL).
+// At runtime, PrismaClient reads DATABASE_URL via the pg adapter in src/lib/db/client.ts.
 datasource db {
   provider = "postgresql"
 }
 
-// ---------------------------------------------------------------------------
-// Project — a website registered for auditing
-// Gap 6 resolved: renamed from Site → Project. siteId → projectId on relations.
-// Foreign key to Supabase auth.users is enforced via RLS, not a Prisma FK.
-// ---------------------------------------------------------------------------
-model Project {
-  id        String   @id @default(cuid())
-  url       String
-  name      String
-  // userId references Supabase auth.users.id (UUID string).
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  auditRuns     AuditRun[]
-  alertRules    AlertRule[]
-  members       ProjectMember[]
-
-  @@index([userId])
-}
-
-// ---------------------------------------------------------------------------
-// AuditRun — a single audit execution for a project
-// ---------------------------------------------------------------------------
-model AuditRun {
-  id           String      @id @default(cuid())
-  projectId    String
-  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  status       AuditStatus @default(PENDING)
-  startedAt    DateTime?
-  finishedAt   DateTime?
-  // Gap 5: errorMessage records the failure reason on FAILED runs (FR-24).
-  errorMessage String?
-  // Gap 2: rawData stores the raw source API response as JSON (FR-21, NFR-30).
-  // MVP: stores the full PageSpeed Insights API response object.
-  // Retention target: 90 days minimum (NFR-31).
-  rawData      Json?
-  createdAt    DateTime    @default(now())
-
-  metrics     Metric[]
-  findings    Finding[]
-  violations  AlertViolation[]
-
-  @@index([projectId])
-  @@index([status])
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════════════════════
 
 enum AuditStatus {
   PENDING
@@ -70,19 +25,121 @@ enum AuditStatus {
   FAILED
 }
 
-// ---------------------------------------------------------------------------
-// Metric — a normalized key/value result from an audit run
-// ---------------------------------------------------------------------------
+enum FindingSeverity {
+  CRITICAL
+  WARNING
+  INFO
+  PASSED
+}
+
+enum FindingCategory {
+  PERFORMANCE
+  ACCESSIBILITY
+  BEST_PRACTICES
+  SEO
+  STRUCTURED_DATA
+}
+
+enum FindingStatus {
+  NEW
+  RECURRING
+  RESOLVED
+}
+
+enum AlertOperator {
+  BELOW
+  ABOVE
+}
+
+enum ProjectRole {
+  ANALYST
+  VIEWER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum NotificationChannelType {
+  SLACK
+  DISCORD
+  EMAIL
+}
+
+enum NotificationEvent {
+  AUDIT_COMPLETE
+  AUDIT_FAILED
+  SCORE_DROP
+  BROKEN_LINKS_FOUND
+  SECURITY_GRADE_DROP
+}
+
+enum UptimeStatus {
+  UP
+  DOWN
+  DEGRADED
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CORE — Project & Audit pipeline
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Project {
+  id        String   @id @default(cuid())
+  url       String
+  name      String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditRuns            AuditRun[]
+  alertRules           AlertRule[]
+  members              ProjectMember[]
+  pages                PageUrl[]
+  comments             Comment[]
+  notificationChannels NotificationChannel[]
+  publicShares         PublicShare[]
+  invites              ProjectInvite[]
+  brokenLinks          BrokenLink[]
+  animationResults     AnimationResult[]
+  seoResults           SeoResult[]
+  securityResults      SecurityResult[]
+  uptimeMonitors       UptimeMonitor[]
+
+  @@index([userId])
+}
+
+model AuditRun {
+  id           String      @id @default(cuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status       AuditStatus @default(PENDING)
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  errorMessage String?
+  rawData      Json?
+  createdAt    DateTime    @default(now())
+
+  metrics    Metric[]
+  findings   Finding[]
+  violations AlertViolation[]
+  pageUrls   PageUrl[]
+  comments   Comment[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
 model Metric {
   id         String   @id @default(cuid())
   auditRunId String
   auditRun   AuditRun @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
-  // key examples: "performance", "accessibility", "lcp", "cls", "inp", "fcp", "tbt"
   key        String
   value      Float
-  // unit examples: "score", "ms", "s", "count", "ratio"
   unit       String?
-  // Canonical source tag values: "pagespeed-insights" (MVP), "search-console" (V1)
   source     String
   createdAt  DateTime @default(now())
 
@@ -90,27 +147,16 @@ model Metric {
   @@index([key, source])
 }
 
-// ---------------------------------------------------------------------------
-// Finding — a structured issue, warning, or passed check from an audit run
-// Gap 3 resolved: new model for FR-40–43.
-// ---------------------------------------------------------------------------
 model Finding {
   id           String          @id @default(cuid())
   auditRunId   String
   auditRun     AuditRun        @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
-  // key is the Lighthouse audit ID, e.g., "uses-optimized-images", "largest-contentful-paint"
   key          String
-  // title is the human-readable audit name, e.g., "Properly size images"
   title        String
   severity     FindingSeverity
   category     FindingCategory
-  // Canonical source tag values: "pagespeed-insights" (MVP), "search-console" (V1)
   source       String
-  // status is null on the first run for a project (no comparison baseline available).
-  // Set on subsequent runs by comparing this run's findings against the previous run.
   status       FindingStatus?
-  // displayValue is the Lighthouse-provided human-readable measured value,
-  // e.g., "2.0 s" for LCP, "1,200 KiB" for image sizes. Optional.
   displayValue String?
   createdAt    DateTime        @default(now())
 
@@ -119,94 +165,51 @@ model Finding {
   @@index([auditRunId, category])
 }
 
-enum FindingSeverity {
-  CRITICAL // Failing: score < 0.5 or equivalent Lighthouse "poor" threshold
-  WARNING  // Needs improvement: score 0.5–0.89 or equivalent
-  INFO     // Informative or not-applicable: no binary pass/fail score
-  PASSED   // Passing: score >= 0.9 or equivalent
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════
 
-enum FindingCategory {
-  PERFORMANCE
-  ACCESSIBILITY
-  BEST_PRACTICES
-  SEO
-  STRUCTURED_DATA // Used for V1 Rich Results / structured data validation findings
-}
-
-enum FindingStatus {
-  NEW       // Failing in this run; was absent or PASSED in the previous run
-  RECURRING // Failing in this run; was also failing in the previous run
-  RESOLVED  // PASSED in this run; was failing in the previous run
-}
-
-// ---------------------------------------------------------------------------
-// AlertRule — threshold alert configuration per project
-// Gap 4 resolved: AlertOperator enum added (OQ-09).
-// ---------------------------------------------------------------------------
 model AlertRule {
   id        String        @id @default(cuid())
   projectId String
   project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  // metric matches a Metric.key value, e.g., "performance", "lcp", "cls"
   metric    String
-  // operator determines alert direction (Gap 4 / OQ-09):
-  //   BELOW: alert when value < threshold  (score-based metrics, e.g., performance < 80)
-  //   ABOVE: alert when value > threshold  (latency metrics, e.g., lcp > 2500)
   operator  AlertOperator @default(BELOW)
   threshold Float
-  enabled    Boolean          @default(true)
-  createdAt  DateTime         @default(now())
+  enabled   Boolean       @default(true)
+  createdAt DateTime      @default(now())
 
   violations AlertViolation[]
 
   @@index([projectId])
 }
 
-enum AlertOperator {
-  BELOW // Alert fires when metric value < threshold
-  ABOVE // Alert fires when metric value > threshold
-}
-
-// ---------------------------------------------------------------------------
-// AlertViolation — a recorded breach of an AlertRule on a specific AuditRun
-// T-13 resolved: dedicated model chosen over inline AuditRun field.
-// Fields snapshot the rule's metric/threshold/operator at violation time so
-// that later edits to the AlertRule do not corrupt the historical record.
-// Writes are pipeline-only (service role). No user INSERT needed.
-// ---------------------------------------------------------------------------
 model AlertViolation {
-  id           String        @id @default(cuid())
-  auditRunId   String
-  auditRun     AuditRun      @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
-  alertRuleId  String
-  alertRule    AlertRule     @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
-  // Snapshot fields — preserve rule state at violation time
-  metricKey    String
-  actualValue  Float
-  threshold    Float
-  operator     AlertOperator
-  createdAt    DateTime      @default(now())
+  id          String        @id @default(cuid())
+  auditRunId  String
+  auditRun    AuditRun      @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  alertRuleId String
+  alertRule   AlertRule     @relation(fields: [alertRuleId], references: [id], onDelete: Cascade)
+  metricKey   String
+  actualValue Float
+  threshold   Float
+  operator    AlertOperator
+  createdAt   DateTime      @default(now())
 
   @@index([auditRunId])
   @@index([alertRuleId])
 }
 
-// ---------------------------------------------------------------------------
-// ProjectMember — invitation-based access for Analyst and Viewer roles
-// The project owner (Project.userId) is NOT in this table; they have full
-// access via the owner-based RLS policies. This table tracks invited members.
-// ProjectRole.ANALYST: full read/write on project data, cannot manage workspace.
-// ProjectRole.VIEWER: read-only access to assigned projects.
-// @@unique ensures one role per (project, user) combination.
-// ---------------------------------------------------------------------------
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEAM / ACCESS
+// ═══════════════════════════════════════════════════════════════════════════════
+
 model ProjectMember {
   id        String      @id @default(cuid())
   projectId String
   project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  userId    String      // Supabase auth.users.id (UUID string)
+  userId    String
   role      ProjectRole
-  // invitedBy records who granted access; used for audit trail only.
   invitedBy String
   createdAt DateTime    @default(now())
 
@@ -214,7 +217,219 @@ model ProjectMember {
   @@index([userId])
 }
 
-enum ProjectRole {
-  ANALYST // Full read/write on project data; cannot manage workspace settings
-  VIEWER  // Read-only access to assigned project data
+model ProjectInvite {
+  id        String       @id @default(cuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  email     String
+  role      ProjectRole  @default(VIEWER)
+  invitedBy String
+  token     String
+  status    InviteStatus @default(PENDING)
+  expiresAt DateTime     @default(now())
+  createdAt DateTime     @default(now())
+
+  @@index([projectId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONTENT / COLLABORATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Comment {
+  id         String    @id @default(cuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId   String
+  content    String
+  auditRunId String?
+  auditRun   AuditRun? @relation(fields: [auditRunId], references: [id], onDelete: SetNull)
+  findingKey String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([auditRunId])
+}
+
+model PageUrl {
+  id             String    @id @default(cuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url            String
+  discoveredAt   DateTime  @default(now())
+  lastAuditedAt  DateTime?
+  lastAuditRunId String?
+  lastAuditRun   AuditRun? @relation(fields: [lastAuditRunId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, url])
+  @@index([projectId])
+}
+
+model PublicShare {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  slug      String    @unique
+  enabled   Boolean   @default(true)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([projectId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model NotificationChannel {
+  id           String                  @id @default(cuid())
+  projectId    String
+  project      Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String                  @default("")
+  type         NotificationChannelType
+  url          String
+  events       NotificationEvent[]
+  enabled      Boolean                 @default(true)
+  lastTestedAt DateTime?
+  createdAt    DateTime                @default(now())
+
+  @@index([projectId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPECIALISED ANALYSIS RESULTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model AnimationResult {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url           String
+  analyzedAt    DateTime @default(now())
+  totalCount    Int      @default(0)
+  gpuComposited Int      @default(0)
+  nonComposited Int      @default(0)
+  loopCount     Int      @default(0)
+  reducedMotion Boolean  @default(false)
+  clsRisk       Boolean  @default(false)
+  data          Json     @default("{}")
+
+  @@index([projectId])
+  @@index([projectId, analyzedAt])
+}
+
+model BrokenLink {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  pageUrl   String
+  linkUrl   String
+  statusCode Int?
+  error     String?
+  checkedAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model SeoResult {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url        String
+  score      Float?
+  data       Json     @default("{}")
+  analyzedAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model SecurityResult {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url       String
+  score     Float?
+  grade     String?
+  data      Json     @default("{}")
+  scannedAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UPTIME MONITORING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model UptimeMonitor {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url           String
+  enabled       Boolean      @default(true)
+  intervalMin   Int          @default(5)
+  lastCheckedAt DateTime?
+  lastLatencyMs Int?
+  lastStatus    UptimeStatus?
+  createdAt     DateTime     @default(now())
+
+  events UptimeEvent[]
+
+  @@index([projectId])
+}
+
+model UptimeEvent {
+  id        String       @id @default(cuid())
+  monitorId String
+  monitor   UptimeMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  status    UptimeStatus
+  statusCode Int?
+  latencyMs  Int?
+  error      String?
+  checkedAt  DateTime    @default(now())
+
+  @@index([monitorId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GOOGLE BUSINESS PROFILE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model GoogleIntegration {
+  id           String    @id @default(cuid())
+  userId       String
+  accessToken  String
+  refreshToken String?
+  expiryDate   DateTime?
+  createdAt    DateTime  @default(now())
+
+  locations GbpLocation[]
+
+  @@index([userId])
+}
+
+model GbpLocation {
+  id                  String            @id @default(cuid())
+  googleIntegrationId String
+  googleIntegration   GoogleIntegration @relation(fields: [googleIntegrationId], references: [id], onDelete: Cascade)
+  googleLocationId    String            @unique
+  title               String
+  createdAt           DateTime          @default(now())
+
+  dailyMetrics GbpDailyMetric[]
+
+  @@index([googleIntegrationId])
+}
+
+model GbpDailyMetric {
+  id            String      @id @default(cuid())
+  gbpLocationId String
+  gbpLocation   GbpLocation @relation(fields: [gbpLocationId], references: [id], onDelete: Cascade)
+  metricDate    DateTime
+  metricName    String
+  metricValue   Int
+  createdAt     DateTime    @default(now())
+
+  @@unique([gbpLocationId, metricDate, metricName])
+  @@index([gbpLocationId, metricDate])
 }

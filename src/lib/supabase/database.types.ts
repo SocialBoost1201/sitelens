@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -100,6 +98,56 @@ export type Database = {
           },
         ]
       }
+      AnimationResult: {
+        Row: {
+          analyzedAt: string
+          clsRisk: boolean
+          data: Json
+          gpuComposited: number
+          id: string
+          loopCount: number
+          nonComposited: number
+          projectId: string
+          reducedMotion: boolean
+          totalCount: number
+          url: string
+        }
+        Insert: {
+          analyzedAt?: string
+          clsRisk?: boolean
+          data?: Json
+          gpuComposited?: number
+          id: string
+          loopCount?: number
+          nonComposited?: number
+          projectId: string
+          reducedMotion?: boolean
+          totalCount?: number
+          url: string
+        }
+        Update: {
+          analyzedAt?: string
+          clsRisk?: boolean
+          data?: Json
+          gpuComposited?: number
+          id?: string
+          loopCount?: number
+          nonComposited?: number
+          projectId?: string
+          reducedMotion?: boolean
+          totalCount?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "AnimationResult_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       AuditRun: {
         Row: {
           createdAt: string
@@ -134,6 +182,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "AuditRun_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      BrokenLink: {
+        Row: {
+          checkedAt: string
+          error: string | null
+          id: string
+          linkUrl: string
+          pageUrl: string
+          projectId: string
+          statusCode: number | null
+        }
+        Insert: {
+          checkedAt?: string
+          error?: string | null
+          id: string
+          linkUrl: string
+          pageUrl: string
+          projectId: string
+          statusCode?: number | null
+        }
+        Update: {
+          checkedAt?: string
+          error?: string | null
+          id?: string
+          linkUrl?: string
+          pageUrl?: string
+          projectId?: string
+          statusCode?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "BrokenLink_projectId_fkey"
             columns: ["projectId"]
             isOneToOne: false
             referencedRelation: "Project"
@@ -226,6 +312,92 @@ export type Database = {
           },
         ]
       }
+      NotificationChannel: {
+        Row: {
+          createdAt: string
+          enabled: boolean
+          events: Database["public"]["Enums"]["NotificationEvent"][]
+          id: string
+          lastTestedAt: string | null
+          name: string
+          projectId: string
+          type: Database["public"]["Enums"]["NotificationChannelType"]
+          url: string
+        }
+        Insert: {
+          createdAt?: string
+          enabled?: boolean
+          events?: Database["public"]["Enums"]["NotificationEvent"][]
+          id: string
+          lastTestedAt?: string | null
+          name?: string
+          projectId: string
+          type: Database["public"]["Enums"]["NotificationChannelType"]
+          url: string
+        }
+        Update: {
+          createdAt?: string
+          enabled?: boolean
+          events?: Database["public"]["Enums"]["NotificationEvent"][]
+          id?: string
+          lastTestedAt?: string | null
+          name?: string
+          projectId?: string
+          type?: Database["public"]["Enums"]["NotificationChannelType"]
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "NotificationChannel_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      PageUrl: {
+        Row: {
+          discoveredAt: string
+          id: string
+          lastAuditedAt: string | null
+          lastAuditRunId: string | null
+          projectId: string
+          url: string
+        }
+        Insert: {
+          discoveredAt?: string
+          id: string
+          lastAuditedAt?: string | null
+          lastAuditRunId?: string | null
+          projectId: string
+          url: string
+        }
+        Update: {
+          discoveredAt?: string
+          id?: string
+          lastAuditedAt?: string | null
+          lastAuditRunId?: string | null
+          projectId?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "PageUrl_lastAuditRunId_fkey"
+            columns: ["lastAuditRunId"]
+            isOneToOne: false
+            referencedRelation: "AuditRun"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "PageUrl_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       Project: {
         Row: {
           createdAt: string
@@ -252,6 +424,133 @@ export type Database = {
           userId?: string
         }
         Relationships: []
+      }
+      PublicShare: {
+        Row: {
+          createdAt: string
+          enabled: boolean
+          expiresAt: string | null
+          id: string
+          projectId: string
+          slug: string
+        }
+        Insert: {
+          createdAt?: string
+          enabled?: boolean
+          expiresAt?: string | null
+          id: string
+          projectId: string
+          slug: string
+        }
+        Update: {
+          createdAt?: string
+          enabled?: boolean
+          expiresAt?: string | null
+          id?: string
+          projectId?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "PublicShare_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      Comment: {
+        Row: {
+          auditRunId: string | null
+          authorId: string
+          content: string
+          createdAt: string
+          findingKey: string | null
+          id: string
+          projectId: string
+          updatedAt: string
+        }
+        Insert: {
+          auditRunId?: string | null
+          authorId: string
+          content: string
+          createdAt?: string
+          findingKey?: string | null
+          id: string
+          projectId: string
+          updatedAt?: string
+        }
+        Update: {
+          auditRunId?: string | null
+          authorId?: string
+          content?: string
+          createdAt?: string
+          findingKey?: string | null
+          id?: string
+          projectId?: string
+          updatedAt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "Comment_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Comment_auditRunId_fkey"
+            columns: ["auditRunId"]
+            isOneToOne: false
+            referencedRelation: "AuditRun"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ProjectInvite: {
+        Row: {
+          createdAt: string
+          email: string
+          expiresAt: string
+          id: string
+          invitedBy: string
+          projectId: string
+          role: Database["public"]["Enums"]["ProjectRole"]
+          status: Database["public"]["Enums"]["InviteStatus"]
+          token: string
+        }
+        Insert: {
+          createdAt?: string
+          email: string
+          expiresAt?: string
+          id: string
+          invitedBy: string
+          projectId: string
+          role?: Database["public"]["Enums"]["ProjectRole"]
+          status?: Database["public"]["Enums"]["InviteStatus"]
+          token: string
+        }
+        Update: {
+          createdAt?: string
+          email?: string
+          expiresAt?: string
+          id?: string
+          invitedBy?: string
+          projectId?: string
+          role?: Database["public"]["Enums"]["ProjectRole"]
+          status?: Database["public"]["Enums"]["InviteStatus"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ProjectInvite_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ProjectMember: {
         Row: {
@@ -288,6 +587,161 @@ export type Database = {
           },
         ]
       }
+      SecurityResult: {
+        Row: {
+          data: Json
+          grade: string | null
+          id: string
+          projectId: string
+          scannedAt: string
+          score: number | null
+          url: string
+        }
+        Insert: {
+          data?: Json
+          grade?: string | null
+          id: string
+          projectId: string
+          scannedAt?: string
+          score?: number | null
+          url: string
+        }
+        Update: {
+          data?: Json
+          grade?: string | null
+          id?: string
+          projectId?: string
+          scannedAt?: string
+          score?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "SecurityResult_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      SeoResult: {
+        Row: {
+          analyzedAt: string
+          data: Json
+          id: string
+          projectId: string
+          score: number | null
+          url: string
+        }
+        Insert: {
+          analyzedAt?: string
+          data?: Json
+          id: string
+          projectId: string
+          score?: number | null
+          url: string
+        }
+        Update: {
+          analyzedAt?: string
+          data?: Json
+          id?: string
+          projectId?: string
+          score?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "SeoResult_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      UptimeEvent: {
+        Row: {
+          checkedAt: string
+          error: string | null
+          id: string
+          latencyMs: number | null
+          monitorId: string
+          status: Database["public"]["Enums"]["UptimeStatus"]
+          statusCode: number | null
+        }
+        Insert: {
+          checkedAt?: string
+          error?: string | null
+          id: string
+          latencyMs?: number | null
+          monitorId: string
+          status: Database["public"]["Enums"]["UptimeStatus"]
+          statusCode?: number | null
+        }
+        Update: {
+          checkedAt?: string
+          error?: string | null
+          id?: string
+          latencyMs?: number | null
+          monitorId?: string
+          status?: Database["public"]["Enums"]["UptimeStatus"]
+          statusCode?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "UptimeEvent_monitorId_fkey"
+            columns: ["monitorId"]
+            isOneToOne: false
+            referencedRelation: "UptimeMonitor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      UptimeMonitor: {
+        Row: {
+          createdAt: string
+          enabled: boolean
+          id: string
+          intervalMin: number
+          lastCheckedAt: string | null
+          lastLatencyMs: number | null
+          lastStatus: Database["public"]["Enums"]["UptimeStatus"] | null
+          projectId: string
+          url: string
+        }
+        Insert: {
+          createdAt?: string
+          enabled?: boolean
+          id: string
+          intervalMin?: number
+          lastCheckedAt?: string | null
+          lastLatencyMs?: number | null
+          lastStatus?: Database["public"]["Enums"]["UptimeStatus"] | null
+          projectId: string
+          url: string
+        }
+        Update: {
+          createdAt?: string
+          enabled?: boolean
+          id?: string
+          intervalMin?: number
+          lastCheckedAt?: string | null
+          lastLatencyMs?: number | null
+          lastStatus?: Database["public"]["Enums"]["UptimeStatus"] | null
+          projectId?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "UptimeMonitor_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -306,7 +760,16 @@ export type Database = {
         | "STRUCTURED_DATA"
       FindingSeverity: "CRITICAL" | "WARNING" | "INFO" | "PASSED"
       FindingStatus: "NEW" | "RECURRING" | "RESOLVED"
+      InviteStatus: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED"
+      NotificationChannelType: "SLACK" | "DISCORD" | "EMAIL"
+      NotificationEvent:
+        | "AUDIT_COMPLETE"
+        | "AUDIT_FAILED"
+        | "SCORE_DROP"
+        | "BROKEN_LINKS_FOUND"
+        | "SECURITY_GRADE_DROP"
       ProjectRole: "ANALYST" | "VIEWER"
+      UptimeStatus: "UP" | "DOWN" | "DEGRADED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -445,7 +908,17 @@ export const Constants = {
       ],
       FindingSeverity: ["CRITICAL", "WARNING", "INFO", "PASSED"],
       FindingStatus: ["NEW", "RECURRING", "RESOLVED"],
+      InviteStatus: ["PENDING", "ACCEPTED", "DECLINED", "EXPIRED"],
+      NotificationChannelType: ["SLACK", "DISCORD", "EMAIL"],
+      NotificationEvent: [
+        "AUDIT_COMPLETE",
+        "AUDIT_FAILED",
+        "SCORE_DROP",
+        "BROKEN_LINKS_FOUND",
+        "SECURITY_GRADE_DROP",
+      ],
       ProjectRole: ["ANALYST", "VIEWER"],
+      UptimeStatus: ["UP", "DOWN", "DEGRADED"],
     },
   },
 } as const

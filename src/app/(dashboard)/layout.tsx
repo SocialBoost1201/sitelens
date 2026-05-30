@@ -2,62 +2,84 @@
 //
 // Responsibilities:
 //   1. Server-side auth guard: verify session independently of the proxy.
-//      Next.js 16 docs warn: "Always verify authentication inside each Server
-//      Function rather than relying on Proxy alone."
-//   2. Render the application shell: navigation header + page content.
-//
-// All routes under (dashboard)/ inherit this layout. The route group prefix
-// "(dashboard)" is stripped from the URL — routes are rendered at /dashboard/*.
+//   2. Render the app shell: dark sidebar + main content area.
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import SignOutButton from "@/components/sign-out-button";
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import { AppSidebar } from "@/components/layout/app-sidebar"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { Search, Command } from "lucide-react"
 
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  const supabase = await createClient();
+  const supabase = await createClient()
 
-  // getUser() is the correct call (not getSession()) — it validates the token
-  // with the Supabase Auth server, not just the local cookie.
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect("/sign-in");
+    redirect("/sign-in")
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation header */}
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-14 items-center justify-between">
-            <div className="flex items-center gap-6">
-              <a
-                href="/dashboard"
-                className="text-base font-semibold text-gray-900 hover:text-gray-700"
-              >
-                SiteLens
-              </a>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-gray-500 sm:block">
-                {user.email}
-              </span>
-              <SignOutButton />
-            </div>
-          </div>
-        </div>
-      </header>
+  const displayName =
+    user.user_metadata?.full_name ?? user.user_metadata?.name ?? ""
 
-      {/* Page content */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        {children}
-      </main>
-    </div>
-  );
+  return (
+    <TooltipProvider>
+      <SidebarProvider>
+        <AppSidebar user={{ name: displayName, email: user.email ?? "" }} />
+        <SidebarInset>
+          {/* ── Top bar ──────────────────────────────────────────── */}
+          <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4"
+            style={{ borderColor: "oklch(1 0 0 / 6%)" }}
+          >
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="-ml-1 opacity-60 hover:opacity-100 transition-opacity" />
+              <Separator orientation="vertical" className="mr-1 h-4 opacity-20" />
+              <span className="text-sm font-medium opacity-50">SiteLens</span>
+            </div>
+
+            {/* Global search hint */}
+            <button
+              className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-all duration-200 hover:opacity-80"
+              style={{
+                background: "oklch(1 0 0 / 5%)",
+                border: "1px solid oklch(1 0 0 / 8%)",
+                color: "oklch(0.60 0.010 265)",
+              }}
+              aria-label="Search"
+            >
+              <Search className="size-3.5" />
+              <span>Search…</span>
+              <kbd
+                className="flex items-center gap-0.5 rounded px-1 py-0.5 font-mono text-[10px]"
+                style={{
+                  background: "oklch(1 0 0 / 8%)",
+                  color: "oklch(0.50 0.010 265)",
+                }}
+              >
+                <Command className="size-2.5" />
+                K
+              </kbd>
+            </button>
+          </header>
+
+          {/* Page content */}
+          <div className="flex flex-1 flex-col gap-4 p-6">
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
+  )
 }

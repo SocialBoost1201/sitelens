@@ -1,0 +1,10 @@
+- main [ref=e3]:
+  - generic [ref=e4]: Foundation Setup
+  - heading "SiteLens" [level=1] [ref=e5]
+  - paragraph [ref=e6]: Unified website analysis and audit dashboard.
+  - generic [ref=e7]:
+    - paragraph [ref=e8]: Repository status
+    - paragraph [ref=e9]:
+      - text: This repository is in the
+      - strong [ref=e10]: foundation / setup phase
+      - text: . Architecture definition is in progress. Dashboard implementation has not started.

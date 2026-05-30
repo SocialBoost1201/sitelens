@@ -17,6 +17,9 @@ if (typeof window !== "undefined" && POSTHOG_KEY) {
     api_host: POSTHOG_HOST,
     // Capture pageviews manually via the provider (see provider.tsx)
     capture_pageview: false,
+    // Enable error tracking since Sentry was removed
+    capture_exceptions: true,
+    autocapture: true,
     // Disable in non-production environments to avoid polluting analytics
     loaded(ph) {
       if (process.env.NODE_ENV !== "production") {

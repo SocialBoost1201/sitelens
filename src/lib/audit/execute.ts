@@ -28,6 +28,8 @@ import { runPageSpeedAudit } from "@/lib/services/pagespeed";
 import { normalizePageSpeedMetrics } from "./normalize/pagespeed";
 import { extractPageSpeedFindings } from "./findings/pagespeed";
 import { evaluateThresholds, type AlertRuleRow } from "./thresholds";
+import { fireEvent } from "@/lib/services/notifier";
+import type { NotificationChannelType } from "@/lib/services/notifier";
 
 // ─── execute ──────────────────────────────────────────────────────────────────
 
@@ -137,6 +139,9 @@ export async function execute(
       .from("AuditRun")
       .update({ status: "COMPLETED", finishedAt })
       .eq("id", auditRunId);
+
+    // Step 9: Fire AUDIT_COMPLETE notifications (best-effort, non-blocking)
+    void notifyAuditComplete(admin, projectId, url, metrics).catch(() => {})
   } catch (err) {
     // On any failure: mark FAILED with error message
     const errorMessage =
@@ -151,6 +156,70 @@ export async function execute(
       })
       .eq("id", auditRunId);
 
+    // Fire AUDIT_FAILED notifications (best-effort)
+    void notifyAuditFailed(admin, projectId, url, errorMessage).catch(() => {})
+
     throw err; // Re-throw so the Route Handler can return an error response
   }
+}
+
+// ─── Notification helpers ─────────────────────────────────────────────────────
+
+async function getEnabledChannels(
+  admin: ReturnType<typeof createAdminClient>,
+  projectId: string,
+) {
+  const { data } = await admin
+    .from("NotificationChannel")
+    .select("type, name, url")
+    .eq("projectId", projectId)
+    .eq("enabled", true)
+  return (data ?? []).map(c => ({ ...c, type: c.type as NotificationChannelType }))
+}
+
+async function notifyAuditComplete(
+  admin: ReturnType<typeof createAdminClient>,
+  projectId: string,
+  url: string,
+  metrics: { key: string; value: number }[],
+) {
+  const channels = await getEnabledChannels(admin, projectId)
+  if (channels.length === 0) return
+
+  const { data: project } = await admin
+    .from("Project").select("name").eq("id", projectId).single()
+
+  const perfScore = metrics.find(m => m.key === "performance")?.value
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://sitelens.app"
+
+  await fireEvent(channels, {
+    event: "AUDIT_COMPLETE",
+    projectName: project?.name ?? projectId,
+    projectUrl: url,
+    dashboardUrl: `${appUrl}/dashboard/${projectId}`,
+    score: perfScore !== undefined ? Math.round(perfScore) : undefined,
+  })
+}
+
+async function notifyAuditFailed(
+  admin: ReturnType<typeof createAdminClient>,
+  projectId: string,
+  url: string,
+  errorMessage: string,
+) {
+  const channels = await getEnabledChannels(admin, projectId)
+  if (channels.length === 0) return
+
+  const { data: project } = await admin
+    .from("Project").select("name").eq("id", projectId).single()
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://sitelens.app"
+
+  await fireEvent(channels, {
+    event: "AUDIT_FAILED",
+    projectName: project?.name ?? projectId,
+    projectUrl: url,
+    dashboardUrl: `${appUrl}/dashboard/${projectId}`,
+    errorMessage,
+  })
 }

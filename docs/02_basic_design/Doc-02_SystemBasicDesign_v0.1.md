@@ -2,8 +2,8 @@
 
 **Project**: SiteLens
 **Version**: 0.1
-**Status**: IN REVIEW — MVP decisions incorporated; pending technical lead approval
-**Last Updated**: 2026-04-05
+**Status**: IN REVIEW — strategic realignment addendum applied 2026-04-10
+**Last Updated**: 2026-04-10
 **Author**: Architecture Agent
 
 ---
@@ -30,6 +30,16 @@ SiteLens is an **internal decision-support dashboard** for website quality manag
 It aggregates audit results from external tools — starting with Google PageSpeed Insights —
 and presents them in a structured, traceable, and historically comparable format for
 authenticated users.
+
+### Strategic Realignment Addendum (2026-04-10)
+
+When wording conflicts exist, this addendum takes precedence.
+
+- Product framing: unified search visibility + site intelligence platform.
+- MVP core pillars: `Website Health` and `Search Visibility`.
+- Extension pillars: `Local Visibility` (GBP), `Impact / Outcomes` (GA4).
+- Future pillar: `GEO / AI-search visibility`.
+- GBP is a Local SEO support module and must not be presented as a primary MVP pillar.
 
 This document establishes the system boundary, actor model, functional structure, and
 high-level data flow at the logical level. It is implementation-aware but does not define
@@ -79,7 +89,8 @@ They should be formally closed in Doc-01 in a subsequent update.
 This document describes **MVP scope only**. The following are explicitly outside MVP:
 
 - Scheduled audit execution (cron scaffold exists; execution logic is V1)
-- Google Search Console integration (V1)
+- Google Search Console and tracked keyword model are included as a narrow MVP
+  Search Visibility layer
 - Rich Results / Structured Data validation (V1)
 - Multi-URL project support (V1)
 - Notification delivery — email or webhook (V1)
@@ -403,7 +414,7 @@ business logic. Scheduling metadata is not yet in the schema.
 | Sentry | **MVP** | Outbound | Auto-instrumented error tracking. Config present; DSN needed. |
 | PostHog | **MVP** | Outbound (browser + server) | Pageview and key-event analytics. Provider wired in layout. |
 | Vercel Cron Jobs | MVP scaffold / **V1 logic** | Inbound, scheduled | CRON_SECRET validated; no business logic at MVP. |
-| Google Search Console API | **V1** | Outbound, server-side | OAuth2 service account. Stub file exists; throws if called. |
+| Google Search Console API | **MVP (narrow)** | Outbound, server-side | Search visibility evidence source. OAuth onboarding and sync cadence remain intentionally minimal. |
 | Rich Results / Structured Data | **V1** | TBD | Source and integration scope not yet decided. |
 | Lighthouse CI | **Future candidate** | CI pipeline | May supplement PSI for CI/CD workflows. Not committed. |
 | Third-party SEO tool imports | **Future candidate** | Import | CSV/JSON import. Not committed. |
@@ -455,7 +466,7 @@ The following are fixed for MVP and must not be assumed otherwise in downstream 
 | **Single-workspace** | All users share one workspace context. No tenant separation at MVP. |
 | **Internal tool** | SiteLens is an internal tool at MVP. No SaaS billing, no public user signup, no multi-tenant model. |
 | **Invitation-only Viewer access** | Viewers are granted access by an Administrator. No public share links. No unauthenticated access. |
-| **PSI-only committed source** | PageSpeed Insights API is the only committed audit source at MVP. |
+| **Dual MVP core sources** | PageSpeed Insights (Website Health) and GSC/ranking (Search Visibility) are MVP core. |
 | **One URL per project** | Multi-URL support (FR-11) is deferred to V1 (Doc-01 A-05). |
 | **Manual audit trigger only** | Scheduled runs are V1. No automated scheduling at MVP. |
 | **Visual violations only** | No email/webhook notification delivery at MVP (FR-63). |

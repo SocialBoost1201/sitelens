@@ -1,32 +1,34 @@
-"use client";
+"use client"
 
-// Delete project button Client Component.
-// Shows a confirmation dialog before calling the deleteProject Server Action.
-
-import { deleteProject } from "@/app/actions/projects";
+import { Trash2 } from "lucide-react"
+import { deleteProject } from "@/app/actions/projects"
+import { Button } from "@/components/ui/button"
 
 export default function DeleteProjectButton({
   projectId,
   projectName,
 }: {
-  projectId: string;
-  projectName: string;
+  projectId: string
+  projectName: string
 }) {
   async function handleDelete() {
     const confirmed = window.confirm(
-      `Delete "${projectName}"? This will permanently remove all audit runs, metrics, and findings.`,
-    );
-    if (!confirmed) return;
-    await deleteProject(projectId);
+      `Delete "${projectName}"?\n\nThis will permanently remove all audit runs, metrics, and findings.`,
+    )
+    if (!confirmed) return
+    await deleteProject(projectId)
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={handleDelete}
-      className="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+      className="text-muted-foreground hover:text-destructive hover:bg-destructive/5"
     >
-      Delete project
-    </button>
-  );
+      <Trash2 className="size-4" />
+      Delete
+    </Button>
+  )
 }

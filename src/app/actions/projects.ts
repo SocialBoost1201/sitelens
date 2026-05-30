@@ -13,6 +13,10 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  assertSafeExternalHttpUrl,
+  isUnsafeExternalUrlError,
+} from "@/lib/security/url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,17 +24,6 @@ export type ProjectActionState =
   | { error: string }
   | { fieldErrors: Record<string, string> }
   | undefined;
-
-// ─── Validation helpers ───────────────────────────────────────────────────────
-
-function isValidHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
 
 // ─── createProject ────────────────────────────────────────────────────────────
 
@@ -50,18 +43,29 @@ export async function createProject(
     fieldErrors.name = "Project name must be 100 characters or fewer.";
   }
 
+  let projectUrl: string | null = null;
+
   if (typeof url !== "string" || !url.trim()) {
     fieldErrors.url = "URL is required.";
-  } else if (!isValidHttpUrl(url.trim())) {
-    fieldErrors.url = "Enter a valid URL starting with http:// or https://";
+  } else {
+    try {
+      projectUrl = await assertSafeExternalHttpUrl(url.trim());
+    } catch (error) {
+      fieldErrors.url = isUnsafeExternalUrlError(error)
+        ? error.message
+        : "Enter a valid public URL.";
+    }
   }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { fieldErrors };
   }
 
+  if (!projectUrl) {
+    return { fieldErrors: { url: "URL is required." } };
+  }
+
   const projectName = (name as string).trim();
-  const projectUrl = (url as string).trim();
 
   const supabase = await createClient();
   const {

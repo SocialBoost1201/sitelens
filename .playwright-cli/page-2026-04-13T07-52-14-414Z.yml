@@ -1,0 +1,31 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "SiteLens" [level=1] [ref=e5]
+    - paragraph [ref=e6]: Create your account.
+  - generic [ref=e7]: SiteLens is an internal tool. Access is by invitation only. If you were not invited, please contact your Administrator.
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - img [ref=e12]
+      - heading "SiteLens" [level=1] [ref=e14]
+      - paragraph [ref=e15]: Invitation only
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Create an account
+        - generic [ref=e19]: Access to SiteLens is by invitation only.
+      - generic [ref=e21]:
+        - alert [ref=e22]: Email address "codex-test-1776066714@example.com" is invalid
+        - generic [ref=e23]:
+          - generic [ref=e24]: Email
+          - textbox "Email" [ref=e25]:
+            - /placeholder: you@example.com
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - text: Password
+            - generic [ref=e28]: (min. 8 chars)
+          - textbox "Password (min. 8 chars)" [ref=e29]:
+            - /placeholder: ••••••••
+        - button "Create account" [ref=e30]
+  - paragraph [ref=e31]:
+    - text: Already have an account?
+    - link "Sign in" [ref=e32] [cursor=pointer]:
+      - /url: /sign-in

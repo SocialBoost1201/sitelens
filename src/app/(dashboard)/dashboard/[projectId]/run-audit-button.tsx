@@ -1,72 +1,59 @@
-"use client";
+"use client"
 
-// Run audit button Client Component.
-// Calls POST /api/audits/[projectId] and reloads the page on completion.
-// Shows loading state while the PSI audit is in progress (10–30 s typical).
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Play, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-
-export default function RunAuditButton({
-  projectId,
-}: {
-  projectId: string;
-}) {
-  const router = useRouter();
-  const [state, setState] = useState<"idle" | "running" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+export default function RunAuditButton({ projectId }: { projectId: string }) {
+  const router = useRouter()
+  const [state, setState] = useState<"idle" | "running" | "error">("idle")
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   async function handleRun() {
-    setState("running");
-    setErrorMsg(null);
+    setState("running")
+    setErrorMsg(null)
 
     try {
-      const res = await fetch(`/api/audits/${projectId}`, {
-        method: "POST",
-      });
-
-      const data = await res.json();
+      const res = await fetch(`/api/audits/${projectId}`, { method: "POST" })
+      const data = await res.json()
 
       if (!res.ok) {
-        setErrorMsg(data.error ?? "Audit failed. Please try again.");
-        setState("error");
-        return;
+        setErrorMsg(data.error ?? "Audit failed. Please try again.")
+        setState("error")
+        return
       }
 
-      // Refresh the page to show the new audit run
-      router.refresh();
-      setState("idle");
+      router.refresh()
+      setState("idle")
     } catch {
-      setErrorMsg("Network error. Please check your connection and try again.");
-      setState("error");
+      setErrorMsg("Network error. Please check your connection.")
+      setState("error")
     }
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        type="button"
+    <div className="flex flex-col gap-1.5">
+      <Button
         onClick={handleRun}
         disabled={state === "running"}
-        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+        size="sm"
       >
         {state === "running" ? (
-          <span className="flex items-center gap-2">
-            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            Running audit…
-          </span>
+          <Loader2 className="mr-1.5 size-4 animate-spin" />
         ) : (
-          "Run audit"
+          <Play className="mr-1.5 size-4" />
         )}
-      </button>
+        {state === "running" ? "Running…" : "Run Audit"}
+      </Button>
       {state === "running" && (
-        <p className="text-xs text-gray-400">
-          Fetching PageSpeed Insights data — this takes 10–30 seconds.
+        <p className="text-xs text-muted-foreground">
+          Fetching PageSpeed data — takes 10–30s.
         </p>
       )}
       {state === "error" && errorMsg && (
-        <p className="text-xs text-red-600">{errorMsg}</p>
+        <p className="text-xs text-destructive">{errorMsg}</p>
       )}
     </div>
-  );
+  )
 }

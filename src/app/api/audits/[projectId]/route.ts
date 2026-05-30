@@ -1,88 +1,115 @@
 // Audit trigger Route Handler — POST /api/audits/[projectId]
 //
-// Triggers a PSI audit run for the given project.
-// The pipeline runs synchronously within this Route Handler — the response
-// is returned only after the run completes (or fails).
+// Triggers a PSI audit for the given project.
+// Supports an optional JSON body:
+//   { url?: string, pageId?: string }
 //
-// This approach is simple and correct for MVP. If timeouts become an issue
-// (PSI typically takes 10–30 s), increase the Vercel function maxDuration
-// in vercel.json and use `after()` for background execution.
-//
-// Authentication: requires a valid session (checked via getUser()).
-// Authorization: the project must be owned by the authenticated user (RLS).
-//
-// Requirements before this endpoint works:
-//   - PAGESPEED_API_KEY set in .env.local
-//   - SUPABASE_SERVICE_ROLE_KEY set in .env.local
+// If `url` is provided, that URL is audited instead of the project root URL.
+// If `pageId` is provided, PageUrl.lastAuditedAt and lastAuditRunId are updated
+// after a successful run.
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { execute } from "@/lib/audit/execute";
+import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { execute } from "@/lib/audit/execute"
+import { auditRateLimit } from "@/lib/ratelimit"
+import {
+  assertSafeExternalHttpUrl,
+  isUnsafeExternalUrlError,
+} from "@/lib/security/url"
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
-  const { projectId } = await params;
+  const { projectId } = await params
 
-  // ── Auth check ───────────────────────────────────────────────────────────
-  const supabase = await createClient();
+  // ── Auth check ────────────────────────────────────────────────────
+  const supabase = await createClient()
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // ── Fetch project (RLS enforces ownership) ───────────────────────────────
+  // ── Rate limit: 5 audits per user+project per hour ───────────────
+  const { success: rateLimitOk } = await auditRateLimit.limit(
+    `${user.id}:${projectId}`,
+  )
+  if (!rateLimitOk) {
+    return NextResponse.json(
+      { error: "Too many audit requests. Please wait before triggering another audit." },
+      { status: 429 },
+    )
+  }
+
+  // ── Parse optional body ───────────────────────────────────────────
+  let targetUrl: string | null = null
+  let pageId: string | null = null
+  try {
+    const body = await request.json().catch(() => ({}))
+    targetUrl = typeof body.url === "string" ? body.url : null
+    pageId = typeof body.pageId === "string" ? body.pageId : null
+  } catch {
+    // no body — use project root URL
+  }
+
+  // ── Fetch project (RLS enforces ownership) ────────────────────────
   const { data: project, error: projectError } = await supabase
     .from("Project")
     .select("id, url, userId")
     .eq("id", projectId)
-    .single();
+    .single()
 
   if (projectError || !project) {
-    return NextResponse.json(
-      { error: "Project not found or access denied." },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "Project not found or access denied." }, { status: 404 })
   }
 
-  // ── Create AuditRun record (PENDING) ─────────────────────────────────────
-  const now = new Date().toISOString();
-  const auditRunId = crypto.randomUUID();
+  let auditUrl: string
+  try {
+    auditUrl = await assertSafeExternalHttpUrl(targetUrl ?? project.url)
+  } catch (error) {
+    if (isUnsafeExternalUrlError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    throw error
+  }
+
+  // ── Create AuditRun record (PENDING) ──────────────────────────────
+  const now = new Date().toISOString()
+  const auditRunId = crypto.randomUUID()
 
   const { error: insertError } = await supabase.from("AuditRun").insert({
     id: auditRunId,
     projectId,
     status: "PENDING",
     createdAt: now,
-  });
+  })
 
   if (insertError) {
-    console.error("[audits/route] Failed to create AuditRun:", insertError);
-    return NextResponse.json(
-      { error: "Failed to create audit run. Please try again." },
-      { status: 500 },
-    );
+    console.error("[audits/route] Failed to create AuditRun:", insertError)
+    return NextResponse.json({ error: "Failed to create audit run." }, { status: 500 })
   }
 
-  // ── Run the pipeline ─────────────────────────────────────────────────────
+  // ── Run the pipeline ──────────────────────────────────────────────
   try {
-    await execute(projectId, auditRunId, project.url);
+    await execute(projectId, auditRunId, auditUrl)
 
-    return NextResponse.json(
-      { auditRunId, status: "COMPLETED" },
-      { status: 200 },
-    );
+    // If a pageId was provided, update the PageUrl row
+    if (pageId) {
+      const admin = createAdminClient()
+      await admin
+        .from("PageUrl")
+        .update({ lastAuditedAt: new Date().toISOString(), lastAuditRunId: auditRunId })
+        .eq("id", pageId)
+    }
+
+    return NextResponse.json({ auditRunId, status: "COMPLETED" }, { status: 200 })
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Audit failed.";
-    console.error("[audits/route] Pipeline error:", message);
-
-    return NextResponse.json(
-      { auditRunId, status: "FAILED", error: message },
-      { status: 500 },
-    );
+    const message = err instanceof Error ? err.message : "Audit failed."
+    console.error("[audits/route] Pipeline error:", message)
+    return NextResponse.json({ auditRunId, status: "FAILED", error: message }, { status: 500 })
   }
 }

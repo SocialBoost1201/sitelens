@@ -1,0 +1,43 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img [ref=e6]
+      - generic [ref=e8]: SiteLens
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - heading "Your website, under the lens." [level=2] [ref=e11]:
+          - text: Your website,
+          - text: under the lens.
+        - paragraph [ref=e12]: Unified audit dashboard for performance, SEO, security, and uptime — all in one place.
+      - list [ref=e13]:
+        - listitem [ref=e14]:
+          - img [ref=e16]
+          - generic [ref=e19]: PageSpeed & Core Web Vitals
+        - listitem [ref=e20]:
+          - img [ref=e22]
+          - generic [ref=e23]: SEO & Search Visibility
+        - listitem [ref=e24]:
+          - img [ref=e26]
+          - generic [ref=e29]: Security & Uptime Monitoring
+    - paragraph [ref=e30]: © 2026 SiteLens. All rights reserved.
+  - generic [ref=e33]:
+    - generic [ref=e34]:
+      - heading "Sign in to your account" [level=2] [ref=e35]
+      - paragraph [ref=e36]: Enter your credentials to continue.
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39]: Email
+        - textbox "Email" [ref=e40]:
+          - /placeholder: you@example.com
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]: Password
+          - link "Forgot password?" [ref=e44] [cursor=pointer]:
+            - /url: /auth/forgot-password
+        - textbox "Password" [ref=e45]:
+          - /placeholder: ••••••••
+      - button "Sign in" [ref=e46]
+    - paragraph [ref=e47]:
+      - text: Don't have an account?
+      - link "Create one" [ref=e48] [cursor=pointer]:
+        - /url: /sign-up

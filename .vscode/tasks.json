@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "SiteLens: MCP Figma Doctor",
+      "type": "shell",
+      "command": "npm run mcp:figma:doctor",
+      "problemMatcher": []
+    },
+    {
+      "label": "SiteLens: MCP Figma Port Test",
+      "type": "shell",
+      "command": "npm run mcp:figma:test",
+      "problemMatcher": []
+    }
+  ]
+}

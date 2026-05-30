@@ -2,8 +2,8 @@
 
 **Project**: SiteLens
 **Version**: 0.1
-**Status**: IN REVIEW — MVP decisions incorporated; pending technical lead approval
-**Last Updated**: 2026-04-05
+**Status**: IN REVIEW — strategic realignment addendum applied 2026-04-10
+**Last Updated**: 2026-04-13
 **Author**: Architecture Agent
 
 ---
@@ -80,8 +80,17 @@ be contradicted in implementation:
 | **Internal tool** | No public SaaS. No public user registration. No pricing model at MVP. |
 | **Single-workspace** | One workspace context shared by all users. No tenant isolation needed at MVP. |
 | **Invitation-only Viewer access** | Viewer role requires explicit assignment. No public URLs. No unauthenticated views. |
-| **PSI-only committed data source** | PageSpeed Insights API is the only committed audit source at MVP. |
+| **Dual MVP core intelligence sources** | PageSpeed Insights (Website Health) and Search Visibility sources (GSC + ranking model) are MVP core. |
 | **One URL per project** | Multi-URL support is V1. The `Project` model retains a single `url` field. |
+
+### 2.4 Strategic Layering Addendum (2026-04-10)
+
+When conflicts exist, this addendum takes precedence.
+
+- Core MVP product layers: `Website Health`, `Search Visibility`.
+- Extension layers: `Local Visibility` (GBP), `Impact / Outcomes` (GA4).
+- Future layer: `GEO / AI-search visibility`.
+- GBP must be exposed as Local SEO support, not as a primary MVP identity module.
 
 ---
 
@@ -392,17 +401,14 @@ Each layer is independently testable. The service wrapper can be tested with moc
 HTTP responses. The normalizer and finding extractor are pure functions testable with
 sample PSI response fixtures.
 
-### 8.2 Google Search Console API (V1 Only — Do Not Activate at MVP)
+### 8.2 Google Search Console API (MVP Narrow Scope)
 
 | Attribute | Detail |
 |-----------|--------|
 | File | `src/lib/services/search-console.ts` |
-| Status | **Stub only — throws if `querySearchConsole()` is called** |
+| Status | MVP core source for Search Visibility; implementation may start as limited-scope ingestion and expand iteratively |
 | Auth | OAuth2 service account (JWT signing not implemented) |
 | Dependency needed | `google-auth-library` or equivalent |
-
-**Do not wire this service into any audit path.** Calling it at MVP will throw.
-All GSC functionality is V1.
 
 ### 8.3 Upstash Redis (Rate Limiting)
 
@@ -412,6 +418,31 @@ All GSC functionality is V1.
 | Status | Scaffold — limiters defined; not yet applied to any Route Handler |
 | `apiRateLimit` | 60 req/min per user/IP (sliding window) |
 | `auditRateLimit` | 5 audits/hour per site (fixed window) |
+
+### 8.4 Animation Intelligence Analysis (MVP Extension)
+
+| Attribute | Detail |
+|-----------|--------|
+| Files | `src/lib/services/animation-analyzer.ts`, `src/app/api/projects/[projectId]/animation/route.ts` |
+| Status | Implemented for local/dev use; persists structured results to `AnimationResult` |
+| Engine | Playwright Chromium in headless mode |
+| Analysis mode | Scenario-based replay of `load`, `hover`, `scroll`, `click`, and `focus` interactions |
+| Persistence | Summary columns in `AnimationResult` plus full JSON payload in `data`; latest run is compared against the previous saved run in the dashboard |
+| Current guarantee | Detects declared CSS animation / transition metadata, tracks scripted motion via the Web Animations API, and promotes entries to observed results when runtime changes are captured |
+| Current limitation | Vercel/serverless production support is not guaranteed in MVP; local execution is the supported path |
+
+**Integration responsibility model:**
+
+```
+src/lib/services/animation-analyzer.ts        ← browser automation + extraction only
+src/app/api/projects/[projectId]/animation    ← auth check + persistence
+src/app/(dashboard)/dashboard/[projectId]/animation
+                                             ← read-only presentation of stored results
+```
+
+The analyzer must prefer explicit runtime observation over static declaration inference.
+When runtime capture is not available, declaration-derived entries may still be stored,
+but they must be marked as non-observed in the payload.
 | Credentials | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` |
 | Boot behavior | Throws at boot if credentials are missing (lazy init; env check at first use) |
 

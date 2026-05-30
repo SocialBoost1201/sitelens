@@ -19,19 +19,58 @@
 //   /sign-up      — sign-up page
 //   /auth/*       — auth callback routes (OAuth, magic links)
 //   /api/cron/*   — internal cron endpoints (protected by CRON_SECRET, not by session)
+//   /api/webhooks/* — provider webhooks (verified by route-specific secrets)
+//   /share/*      — public report links
+//   /invite/*     — invitation landing pages
 
 import { type NextRequest, NextResponse } from "next/server";
 import { createProxyClient } from "@/lib/supabase/proxy";
 
 /** Routes that do NOT require an authenticated session. */
-const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/auth/"];
+const AUTH_PAGE_PATHS = ["/sign-in", "/sign-up"];
+const PUBLIC_EXACT_PATHS = ["/", ...AUTH_PAGE_PATHS];
+const PUBLIC_PREFIXES = [
+  "/auth/",
+  "/api/cron/",
+  "/api/webhooks/",
+  "/share/",
+  "/invite/",
+];
 
 function isPublicPath(pathname: string): boolean {
-  if (pathname === "/") return true;
-  return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  return (
+    PUBLIC_EXACT_PATHS.includes(pathname) ||
+    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
+}
+
+function isAuthPage(pathname: string): boolean {
+  return AUTH_PAGE_PATHS.includes(pathname);
+}
+
+function hasSupabaseConfig(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
 }
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const publicPath = isPublicPath(pathname);
+
+  if (!hasSupabaseConfig()) {
+    if (publicPath) return NextResponse.next();
+
+    const signInUrl = new URL("/sign-in", request.url);
+    signInUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(signInUrl);
+  }
+
+  if (publicPath && !isAuthPage(pathname)) {
+    return NextResponse.next();
+  }
+
   const { supabase, response } = createProxyClient(request);
 
   // IMPORTANT: Do not run any code between createProxyClient() and getUser()
@@ -41,10 +80,8 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-
   // Authenticated user trying to access the auth pages → redirect to dashboard.
-  if (user && (pathname === "/sign-in" || pathname === "/sign-up")) {
+  if (user && isAuthPage(pathname)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

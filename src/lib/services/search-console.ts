@@ -1,17 +1,24 @@
 // Google Search Console API service — SiteLens
-// SCAFFOLD — not yet fully implemented.
 //
-// Prerequisites before activating:
-//   1. Create a Google Cloud service account with Search Console access
-//   2. Set GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL and GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY in .env.local
+// Server-to-server auth via Google service account (JWT).
+// Access tokens are cached in-process and refreshed 60s before expiry.
+//
+// Prerequisites:
+//   1. Create a Google Cloud service account
+//   2. Enable "Google Search Console API" in the Cloud project
 //   3. Grant the service account "Restricted" or "Full" access in Search Console
-//   4. Enable the "Google Search Console API" in your Google Cloud project
-//
-// NOTE: This service uses a service-account (server-to-server) auth pattern.
-// End-user OAuth (delegated access) is NOT implemented yet — that will require
-// a full OAuth 2.0 flow and is deferred to a future phase.
+//   4. Set in .env.local:
+//        GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL=sa@project.iam.gserviceaccount.com
+//        GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n..."
 //
 // Docs: https://developers.google.com/webmaster-tools/v1/searchanalytics/query
+// Auth: https://developers.google.com/identity/protocols/oauth2/service-account
+
+import { JWT } from "google-auth-library";
+
+const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SearchConsoleQueryOptions {
   siteUrl: string;
@@ -34,18 +41,68 @@ export interface SearchConsoleResult {
   rows: SearchConsoleRow[];
 }
 
+// ─── Token cache (module-level, survives across requests in same process) ──────
+
+let _jwtClient: JWT | null = null;
+
+function getJwtClient(): JWT {
+  if (_jwtClient) return _jwtClient;
+
+  const clientEmail = process.env.GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL;
+  const privateKey = process.env.GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY;
+
+  if (!clientEmail || !privateKey) {
+    throw new Error(
+      "[search-console] GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL and " +
+        "GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY must be set in .env.local.\n" +
+        "See src/lib/services/search-console.ts for setup instructions.",
+    );
+  }
+
+  // Environment variables often store newlines as literal \n — unescape them.
+  const normalizedKey = privateKey.replace(/\\n/g, "\n");
+
+  _jwtClient = new JWT({
+    email: clientEmail,
+    key: normalizedKey,
+    scopes: [SEARCH_CONSOLE_SCOPE],
+  });
+
+  return _jwtClient;
+}
+
+// ─── getAccessToken ───────────────────────────────────────────────────────────
+
+/**
+ * Returns a valid OAuth2 access token for the Search Console API.
+ * google-auth-library handles caching and refresh automatically.
+ */
+async function getAccessToken(): Promise<string> {
+  const client = getJwtClient();
+  const tokenResponse = await client.getAccessToken();
+
+  if (!tokenResponse.token) {
+    throw new Error("[search-console] Failed to obtain access token from Google.");
+  }
+
+  return tokenResponse.token;
+}
+
+// ─── querySearchConsole ───────────────────────────────────────────────────────
+
 /**
  * Fetch search analytics data from Google Search Console.
  *
- * SCAFFOLD — JWT signing and OAuth token refresh are not yet implemented.
- * This function is a typed stub to establish the service interface.
- * Implement `getAccessToken()` below before calling this in production.
+ * @param options.siteUrl    Verified site URL (e.g. "https://example.com/" or "sc-domain:example.com")
+ * @param options.startDate  Start of reporting range (YYYY-MM-DD)
+ * @param options.endDate    End of reporting range (YYYY-MM-DD)
+ * @param options.dimensions Breakdown dimensions (default: ["date"])
+ * @param options.rowLimit   Max rows returned (default: 25, max: 25000)
  */
 export async function querySearchConsole(
   options: SearchConsoleQueryOptions,
 ): Promise<SearchConsoleResult> {
-  const { siteUrl, startDate, endDate, dimensions = ["date"], rowLimit = 25 } =
-    options;
+  const { siteUrl, startDate, endDate, dimensions = ["date"], rowLimit = 25 } = options;
 
   const accessToken = await getAccessToken();
 
@@ -57,57 +114,72 @@ export async function querySearchConsole(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      startDate,
-      endDate,
-      dimensions,
-      rowLimit,
-    }),
+    body: JSON.stringify({ startDate, endDate, dimensions, rowLimit }),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {
+    const body = await response.text().catch(() => "");
     throw new Error(
-      `[search-console] API request failed: ${response.status} ${response.statusText}`,
+      `[search-console] API request failed: ${response.status} ${response.statusText}. ${body}`,
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data: Record<string, any> = await response.json();
+  const data = (await response.json()) as { rows?: SearchConsoleRow[] };
 
   return {
     siteUrl,
-    rows: (data.rows ?? []) as SearchConsoleRow[],
+    rows: data.rows ?? [],
   };
 }
 
-// ---------------------------------------------------------------------------
-// Internal — JWT / service-account token handling
-// SCAFFOLD: implement proper JWT signing before using in production.
-// ---------------------------------------------------------------------------
+// ─── Convenience helpers ──────────────────────────────────────────────────────
 
 /**
- * Obtain a Google OAuth access token via service-account JWT.
- *
- * SCAFFOLD — this function is not yet implemented.
- * To implement: sign a JWT with the service-account private key, exchange it
- * for a short-lived access token via the Google token endpoint.
- * See: https://developers.google.com/identity/protocols/oauth2/service-account
+ * Fetch last 28 days of top queries for a site.
+ * Sorted by clicks descending (API default).
  */
-async function getAccessToken(): Promise<string> {
-  const clientEmail = process.env.GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL;
-  const privateKey = process.env.GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY;
+export async function getTopQueries(
+  siteUrl: string,
+  rowLimit = 100,
+): Promise<SearchConsoleRow[]> {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - 28);
 
-  if (!clientEmail || !privateKey) {
-    throw new Error(
-      "[search-console] GOOGLE_SEARCH_CONSOLE_CLIENT_EMAIL and " +
-        "GOOGLE_SEARCH_CONSOLE_PRIVATE_KEY must be set in .env.local.",
-    );
-  }
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
 
-  // TODO: Implement JWT signing and token exchange.
-  // Recommended library: `google-auth-library` (npm install google-auth-library)
-  throw new Error(
-    "[search-console] getAccessToken() is not yet implemented. " +
-      "See the TODO comment in src/lib/services/search-console.ts.",
-  );
+  const result = await querySearchConsole({
+    siteUrl,
+    startDate: fmt(startDate),
+    endDate: fmt(endDate),
+    dimensions: ["query"],
+    rowLimit,
+  });
+
+  return result.rows;
+}
+
+/**
+ * Fetch last 28 days of performance data grouped by date.
+ * Useful for trend charts (clicks / impressions over time).
+ */
+export async function getDailyPerformance(
+  siteUrl: string,
+): Promise<SearchConsoleRow[]> {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - 28);
+
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+  const result = await querySearchConsole({
+    siteUrl,
+    startDate: fmt(startDate),
+    endDate: fmt(endDate),
+    dimensions: ["date"],
+    rowLimit: 28,
+  });
+
+  return result.rows;
 }

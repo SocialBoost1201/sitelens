@@ -1,0 +1,6 @@
+{
+  "mcpFigma.websocketPort": 3055,
+  "mcpFigma.autoStartWebSocket": false,
+  "mcpFigma.enableStatusBar": true,
+  "mcpFigma.aiAssistant": "cursor"
+}

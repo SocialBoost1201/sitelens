@@ -1,0 +1,149 @@
+- generic [ref=e2]:
+  - generic [ref=e5]:
+    - list [ref=e7]:
+      - listitem [ref=e8]:
+        - link "SiteLens Audit Platform" [ref=e9] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e11]
+          - generic [ref=e13]:
+            - generic [ref=e14]: SiteLens
+            - generic [ref=e15]: Audit Platform
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Overview
+        - list [ref=e19]:
+          - listitem [ref=e20]:
+            - link "Dashboard" [ref=e21] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e22]
+              - generic [ref=e27]: Dashboard
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - img [ref=e30]
+          - text: Project
+        - list [ref=e32]:
+          - listitem [ref=e33]:
+            - link "Overview" [ref=e34] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba
+              - img [ref=e35]
+              - generic [ref=e38]: Overview
+          - listitem [ref=e39]:
+            - link "Search Visibility" [ref=e40] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/seo
+              - img [ref=e41]
+              - generic [ref=e44]: Search Visibility
+          - listitem [ref=e45]:
+            - link "Animation" [ref=e46] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/animation
+              - img [ref=e47]
+              - generic [ref=e50]: Animation
+          - listitem [ref=e51]:
+            - link "Reports" [ref=e52] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/report
+              - img [ref=e53]
+              - generic [ref=e57]: Reports
+          - listitem [ref=e58]:
+            - link "Settings" [ref=e59] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/settings
+              - img [ref=e60]
+              - generic [ref=e63]: Settings
+      - generic [ref=e64]:
+        - generic [ref=e65]: Website Health
+        - list [ref=e66]:
+          - listitem [ref=e67]:
+            - link "Pages" [ref=e68] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/pages
+              - img [ref=e69]
+              - generic [ref=e72]: Pages
+          - listitem [ref=e73]:
+            - link "Security" [ref=e74] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/security
+              - img [ref=e75]
+              - generic [ref=e78]: Security
+          - listitem [ref=e79]:
+            - link "Broken Links" [ref=e80] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/links
+              - img [ref=e81]
+              - generic [ref=e84]: Broken Links
+          - listitem [ref=e85]:
+            - link "Uptime" [ref=e86] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/uptime
+              - img [ref=e87]
+              - generic [ref=e89]: Uptime
+      - generic [ref=e90]:
+        - generic [ref=e91]: Extensions
+        - list [ref=e92]:
+          - listitem [ref=e93]:
+            - link "Local SEO" [ref=e94] [cursor=pointer]:
+              - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba/gbp
+              - img [ref=e95]
+              - generic [ref=e99]: Local SEO
+      - generic [ref=e100]:
+        - generic [ref=e101]: Tools
+        - list [ref=e102]:
+          - listitem [ref=e103]:
+            - link "Alerts" [ref=e104] [cursor=pointer]:
+              - /url: /dashboard/alerts
+              - img [ref=e105]
+              - generic [ref=e108]: Alerts
+          - listitem [ref=e109]:
+            - link "Uptime" [ref=e110] [cursor=pointer]:
+              - /url: /dashboard/uptime
+              - img [ref=e111]
+              - generic [ref=e113]: Uptime
+          - listitem [ref=e114]:
+            - link "Settings" [ref=e115] [cursor=pointer]:
+              - /url: /dashboard/settings
+              - img [ref=e116]
+              - generic [ref=e119]: Settings
+      - list [ref=e121]:
+        - listitem [ref=e122]:
+          - link "Add Project" [ref=e123] [cursor=pointer]:
+            - /url: /dashboard/new
+            - img [ref=e124]
+            - generic [ref=e125]: Add Project
+    - list [ref=e127]:
+      - listitem [ref=e128]:
+        - button "CO User codex.takuma.live.1776066714@gmail.com" [ref=e129]:
+          - generic [ref=e131]: CO
+          - generic [ref=e132]:
+            - generic [ref=e133]: User
+            - generic [ref=e134]: codex.takuma.live.1776066714@gmail.com
+          - img [ref=e135]
+    - button "Toggle Sidebar" [ref=e138]
+  - main [ref=e139]:
+    - generic [ref=e140]:
+      - generic [ref=e141]:
+        - button "Toggle Sidebar" [ref=e142]:
+          - img
+          - generic [ref=e143]: Toggle Sidebar
+        - generic [ref=e144]: SiteLens
+      - button "Search" [ref=e145]:
+        - img [ref=e146]
+        - generic [ref=e149]: Search…
+        - generic [ref=e150]:
+          - img [ref=e151]
+          - text: K
+    - generic [ref=e154]:
+      - generic [ref=e155]:
+        - link "Projects" [ref=e156] [cursor=pointer]:
+          - /url: /dashboard
+        - generic [ref=e157]: /
+        - link "Codex Animation Test" [ref=e158] [cursor=pointer]:
+          - /url: /dashboard/b6e7f2f2-43af-4e80-a7e3-a68e534cfbba
+        - generic [ref=e159]: /
+        - generic [ref=e160]: Animation
+      - generic [ref=e161]:
+        - generic [ref=e162]:
+          - heading "Animation Analysis" [level=1] [ref=e163]
+          - paragraph [ref=e164]: No animation analysis yet
+        - button "Run Analysis" [active] [ref=e166]:
+          - img
+          - text: Run Analysis
+      - generic [ref=e168]:
+        - paragraph [ref=e169]: Animation results are not readable yet.
+        - paragraph [ref=e170]: The AnimationResult table may not be provisioned in Supabase yet. Apply the animation migration, then run analysis again.
+      - generic [ref=e172]:
+        - img [ref=e173]
+        - heading "No animation analysis yet" [level=3] [ref=e176]
+        - paragraph [ref=e177]: No animation analysis yet. Click Run Analysis to start.

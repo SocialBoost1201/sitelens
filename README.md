@@ -55,8 +55,8 @@ The goal is to provide a single, clean interface for monitoring and improving we
 ## Local Development
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies and generate Prisma client
+npm run setup
 
 # Start development server
 npm run dev
@@ -66,11 +66,45 @@ npm run lint
 
 # Build (production check)
 npm run build
+
+# Optional: validate repo-local MCP Figma wiring
+npm run mcp:figma:doctor
+npm run mcp:figma:test
 ```
 
 The app runs at `http://localhost:3000` by default.
 
 Environment variables: copy `.env.example` → `.env.local` and fill in values.
+
+---
+
+## MCP Figma Workflow
+
+SiteLens includes a repo-local MCP Figma workflow for VS Code, aimed at keeping
+the setup honest and minimal:
+
+- Workspace defaults live in `.vscode/settings.json`
+- Quick validation tasks live in `.vscode/tasks.json`
+- CLI checks live in `scripts/mcp-figma.mjs`
+
+### Verified in this repository
+
+| Capability | Status | Notes |
+|---|---|---|
+| Workspace-level `mcpFigma.*` settings | ✅ Included | Shared in `.vscode/settings.json` |
+| Repo-local connection checks | ✅ Included | `npm run mcp:figma:doctor` and `npm run mcp:figma:test` |
+| Node.js requirement (18+) | ✅ Met locally | Current machine is already above the minimum |
+
+### Not implemented by this repository
+
+| Capability | Status | Notes |
+|---|---|---|
+| One-click assistant config in home directories | Manual / external | This repo does not edit `~/.cursor`, Claude Desktop, or Windsurf config files |
+| WebSocket server lifecycle from VS Code | External extension feature | The server is managed by the MCP Figma extension, not by SiteLens |
+| Figma plugin installation | Manual / external | Follow the extension or Figma Community install flow |
+| Status bar / explorer UI | External extension feature | Provided by the extension when installed in VS Code |
+
+See `docs/08_operations/Doc-08_OperationsDesign_v0.1.md` for the project-specific runbook.
 
 ---
 

@@ -2,8 +2,8 @@
 
 **Project**: SiteLens
 **Version**: 0.1
-**Status**: REFINED DRAFT — OQ-02/03/06 closed 2026-04-05
-**Last Updated**: 2026-04-05
+**Status**: REFINED DRAFT — strategic realignment addendum applied 2026-04-10
+**Last Updated**: 2026-04-10
 **Author**: Requirements Agent (Antigravity)
 
 ---
@@ -109,6 +109,26 @@ SiteLens is not:
 - A competitive intelligence platform
 - A full enterprise analytics suite
 - A real-time uptime monitoring system (at MVP)
+
+### 3.3 Strategic Product Realignment Addendum (2026-04-10)
+
+This addendum supersedes earlier wording when conflicts exist.
+
+**Updated product definition:**
+
+SiteLens is a unified search visibility and site intelligence platform that
+connects site quality signals with search and local visibility outcomes.
+
+**Updated product framing:**
+
+- Core: Website Health + Search Visibility
+- Extension layers: Local Visibility (GBP) + Impact/Outcomes (GA4)
+- Future advanced layer: GEO / AI-search visibility
+
+**Positioning guardrail:**
+
+GBP is a Local SEO support module and must not be represented as a primary MVP
+identity pillar.
 
 ---
 
@@ -264,6 +284,32 @@ or a printable page.
 ---
 
 ## 7. Scope Definition
+
+### 7.0 Strategic Scope Override (2026-04-10)
+
+This section updates MVP scope discipline for product realignment. When this
+section conflicts with older MVP wording, this section takes precedence.
+
+**MVP must include:**
+
+- Website Health core (audit runs, findings, CWV/SEO/security/broken links)
+- Search Visibility core (narrow): GSC daily metrics + tracked keywords +
+  basic ranking snapshots
+- Core reporting and in-app alert baseline
+
+**MVP must exclude:**
+
+- GA4 integration
+- GBP as a primary navigation pillar
+- Local map ranking / MEO ranking
+- GEO visibility analysis
+- Advanced causation modeling
+
+**Post-MVP extensions:**
+
+- Local SEO module maturation (GBP)
+- GA4 outcomes module
+- Stronger comparison transform layers
 
 ### 7.1 MVP Scope
 
@@ -597,6 +643,12 @@ The MVP is considered successful when all of the following are observable:
 | **PSI** | PageSpeed Insights — Google's public API that runs Lighthouse and returns lab data and CrUX field data. |
 | **RLS** | Row-Level Security — a Supabase/PostgreSQL feature that restricts data access at the database row level based on the authenticated user. |
 | **GSC** | Google Search Console — Google's web service for monitoring search performance and indexing status. |
+| **SEO** | Organic search optimization and technical/content discoverability practice. In SiteLens, this is not identical to ranking snapshots. |
+| **Keyword Ranking** | Position tracking for explicitly tracked terms. Separate signal family from GSC aggregate metrics. |
+| **GBP** | Google Business Profile data used as Local SEO support signals. Not equivalent to local ranking truth. |
+| **MEO** | Local map/search optimization discipline. Broader than GBP API metrics alone. |
+| **GA4** | Google Analytics 4 outcome/behavior telemetry. Not a primary search visibility source of truth. |
+| **GEO** | AI-search/LLM-era visibility intelligence. Future capability, not MVP-critical. |
 
 ---
 
