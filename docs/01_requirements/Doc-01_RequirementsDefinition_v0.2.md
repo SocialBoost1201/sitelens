@@ -1,10 +1,10 @@
 # Doc-01: Requirements Definition
 
 **Project**: SiteLens
-**Version**: 0.1
-**Status**: REFINED DRAFT — strategic realignment addendum applied 2026-04-10
-**Last Updated**: 2026-04-10
-**Author**: Requirements Agent (Antigravity)
+**Version**: 0.2
+**Status**: REFINED DRAFT — implementation reality alignment applied 2026-06-17 (supersedes 2026-04-10 scope where noted)
+**Last Updated**: 2026-06-17
+**Author**: Requirements Agent (Antigravity); 2026-06-17 reconciliation via implementation review
 
 ---
 
@@ -311,6 +311,66 @@ section conflicts with older MVP wording, this section takes precedence.
 - GA4 outcomes module
 - Stronger comparison transform layers
 
+### 7.0.1 Implementation Reality Alignment (2026-06-17)
+
+This section reconciles the requirements with what has actually been **implemented and
+verified in the codebase** as of 2026-06-17. When it conflicts with earlier scope wording
+(including §7.0, §7.2, §7.3, §7.4), **this section takes precedence**. It does not change
+scoring logic, evaluation thresholds, or data-parsing rules; it only re-classifies scope to
+match the shipped product.
+
+> Rationale: the build has moved well past the original narrow MVP. Several capabilities
+> previously listed as Future (§7.3) or Out of Scope (§7.4) are now shipped, and the
+> requirements must reflect that to remain the authoritative reference.
+
+#### A. Promoted into committed scope (previously Future / Out of Scope)
+
+| Capability | Prior status | New status | Implementation evidence |
+|------------|-------------|-----------|-------------------------|
+| **Competitor benchmarking** (you-vs-competitor) | §7.4 Out of Scope | **In scope** | `Competitor` model; `/dashboard/[id]/competitors`; `/api/projects/[id]/competitors` |
+| **Uptime monitoring** (periodic HEAD-check; UP / DEGRADED / DOWN) | §7.3 Future / §7.4 (real-time) | **In scope** (periodic, **not** sub-minute) | `UptimeMonitor`/`UptimeEvent` models; `/dashboard/[id]/uptime`; `/api/cron/uptime` |
+| **GEO / AI-search visibility** | §3.3 future advanced layer; §7.0 MVP-excluded | **In scope** | `GeoResult` model; `geo-analyzer.ts`; `/dashboard/[id]/geo`; `/api/projects/[id]/geo` |
+| **Broken-link auditing** (recursive crawl) | §7.4 (full SEO crawler excluded) | **In scope** (link-status crawl only; full link-graph still excluded) | `link-checker.ts`; `/dashboard/[id]/links` |
+
+#### B. Newly built modules not previously specified
+
+| Capability | Status | Implementation evidence |
+|------------|--------|-------------------------|
+| **Animation / motion profiler** (load / hover / scroll capture + comparison) | **In scope (shipped)** | `AnimationResult`; `animation-analyzer.ts`; `animation-comparison.ts`; `/dashboard/[id]/animation` |
+| **Page crawl inventory** (discovered URL list) | **In scope (shipped)** | `/dashboard/[id]/pages`; `crawler.ts` |
+| **Cross-axis "Site Health"** (unified overview across axes) | **In scope (shipped)** | `site-health.tsx` on project overview |
+| **Security headers audit** (OWASP rules, A+–F grade) | In scope (already implied by §7.0) | `SecurityResult`; `security-scanner.ts`; `/dashboard/[id]/security` |
+
+#### C. V1 features (§7.2) now implemented
+
+- Scheduled audit runs — `/api/cron/audit`, plus `/api/cron/audit-recovery` (retry/recovery)
+- Google Search Console surfacing — `search-console.ts` + `seo/search-console-panel.tsx`
+- Webhook notifications on events — Slack / Discord / generic via `notifier.ts`
+- Auto-audit on deploy/push — `/api/webhooks/vercel`, `/api/webhooks/github` (fail-closed signature verification)
+- Read-only shareable report view — `/share/[slug]` (with optional expiry)
+- Weekly digest report — `/api/cron/weekly-report`; `/dashboard/[id]/report`
+- Google Business Profile (Local SEO support module) — OAuth connect/sync; `/dashboard/[id]/gbp`
+  (per §3.3 guardrail, GBP remains a support module, **not** a primary identity pillar)
+
+#### D. Still pending (NOT yet implemented — do not represent as done)
+
+| Item | Status / constraint |
+|------|--------------------|
+| Tracked keywords + ranking snapshots (§7.0 "Search Visibility core") | **Not implemented** — no keyword/ranking model or code present |
+| MEO / local-map **score** (0–100) | **Not implemented** — GBP shows raw metrics only; a scoring model is **approval-gated** (do not invent) |
+| Finding diff state (NEW / RECURRING / RESOLVED) cross-run wiring | **Partial** — `FindingStatus` enum + first-run scaffold exist; comparison-run population not confirmed |
+| Multi-URL per project (FR-11) | **Deferred to V1** as originally planned (one URL per project today) |
+| Error tracking via Sentry (NFR-70) | **Not implemented** — only PostHog present |
+| Silent-failure hardening (FR-24 / NFR-52) | **Partial** — some swallowed errors remain |
+
+#### E. Items that remain explicitly out of scope (unchanged)
+
+- Full SEO crawler with link-graph / crawl-budget analysis
+- Real-time **sub-minute** uptime checks
+- AI auto-remediation; CMS/website builder
+- Enterprise multi-tenant billing
+- Full Lighthouse CLI parity (PSI remains the source)
+
 ### 7.1 MVP Scope
 
 The MVP must be narrow, buildable, and verifiable. It must include only what is
@@ -379,8 +439,8 @@ The following are not in scope at any point in the current product definition:
 | AI auto-remediation (auto-fixing detected issues) | Not validated; high complexity; risk of unintended site changes |
 | CMS replacement or content management | Out of domain |
 | Enterprise billing and multi-tenant SaaS | Premature; not part of current product definition |
-| Competitive intelligence (competitor benchmarking) | Separate product concern |
-| Real-time monitoring (sub-minute uptime checks) | Infrastructure cost and complexity not justified at MVP |
+| ~~Competitive intelligence (competitor benchmarking)~~ → **moved IN SCOPE, see §7.0.1** | Implemented as you-vs-competitor benchmarking (2026) |
+| Real-time monitoring (**sub-minute** uptime checks) | Sub-minute checks remain out of scope; **periodic HEAD-check uptime is now in scope** (§7.0.1) |
 | Full Lighthouse CLI parity | CLI remains the source; SiteLens consumes results, not replicates behavior |
 
 ---
