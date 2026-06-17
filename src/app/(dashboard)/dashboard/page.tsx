@@ -107,7 +107,7 @@ export default async function DashboardPage() {
             color: "oklch(0.80 0.14 29)",
           }}
         >
-          Failed to load projects. Please refresh the page.
+          Failed to load projects — {error.code}: {error.message}
         </div>
       )}
 
