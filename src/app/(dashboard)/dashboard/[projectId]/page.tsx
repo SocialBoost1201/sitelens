@@ -163,7 +163,10 @@ export default async function ProjectDetailPage({
         .limit(20),
     ])
 
-  if (projectError || !project) notFound()
+  if (projectError || !project) {
+    console.error("[ProjectDetail] fetch failed", { projectId, code: projectError?.code, message: projectError?.message, hint: projectError?.hint })
+    notFound()
+  }
 
   const typedProject = project as Project
   const typedRuns = (auditRuns ?? []) as AuditRun[]
