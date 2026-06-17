@@ -24,18 +24,28 @@ type LimitResult = Awaited<ReturnType<Ratelimit["limit"]>>;
 
 // ─── Internal helpers ──────────────────────────────────────────────────────
 
+/** Strip surrounding whitespace, newlines, and accidental quote wrapping from env values. */
+function cleanEnv(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  return trimmed.replace(/^["']/, "").replace(/["']$/, "").trim() || undefined;
+}
+
+const _upstashUrl = cleanEnv(process.env.UPSTASH_REDIS_REST_URL);
+const _upstashToken = cleanEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
+
 function isConfigured(): boolean {
-  return !!(
-    process.env.UPSTASH_REDIS_REST_URL &&
-    process.env.UPSTASH_REDIS_REST_TOKEN
-  );
+  return !!(_upstashUrl && _upstashToken);
 }
 
 function buildRedis(): Redis {
-  return new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  });
+  if (!_upstashUrl || !_upstashToken) {
+    // Should never reach here because LazyRatelimit guards with isConfigured(),
+    // but guard anyway so TypeScript is satisfied without non-null assertions.
+    console.warn("[ratelimit] buildRedis called without valid Upstash config — rate limit disabled");
+    throw new Error("Upstash Redis is not configured");
+  }
+  return new Redis({ url: _upstashUrl, token: _upstashToken });
 }
 
 // Shared pass-through when Upstash is not configured.
@@ -86,5 +96,22 @@ export const auditRateLimit = new LazyRatelimit(() =>
     limiter: Ratelimit.fixedWindow(5, "1 h"),
     analytics: true,
     prefix: "sitelens:audit",
+  }),
+);
+
+/**
+ * Auth rate limiter — 10 attempts per 10 minutes per client IP.
+ *
+ * Auth Server Actions (signIn / signUp / requestPasswordReset) POST to page
+ * paths, not /api/* routes, so they bypass the proxy-layer API rate limit.
+ * This limiter is the brute-force guard for credential and reset endpoints.
+ * Identifier: client IP (from x-forwarded-for / x-real-ip).
+ */
+export const authRateLimit = new LazyRatelimit(() =>
+  new Ratelimit({
+    redis: buildRedis(),
+    limiter: Ratelimit.slidingWindow(10, "10 m"),
+    analytics: true,
+    prefix: "sitelens:auth",
   }),
 );

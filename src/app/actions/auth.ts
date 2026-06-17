@@ -11,7 +11,9 @@
 // Validation is minimal at MVP (type + emptiness). Add Zod if rules grow.
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { authRateLimit } from "@/lib/ratelimit";
 
 // ─── Sign Up ──────────────────────────────────────────────────────────────────
 
@@ -19,6 +21,23 @@ export type AuthActionState =
   | { error: string }
   | { message: string }
   | undefined;
+
+// Generic message shown when the auth rate limit is exceeded. Kept vague so it
+// does not reveal which account or endpoint is being probed.
+const RATE_LIMIT_MESSAGE =
+  "Too many attempts. Please wait a few minutes and try again.";
+
+/**
+ * Best-effort client IP from proxy headers. Auth Server Actions bypass the
+ * proxy-layer API rate limit, so we key the auth limiter on the caller IP.
+ * Falls back to "unknown" (a shared bucket) when no header is present.
+ */
+async function clientIp(): Promise<string> {
+  const h = await headers();
+  const forwarded = h.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return h.get("x-real-ip") ?? "unknown";
+}
 
 export async function signUp(
   _state: AuthActionState,
@@ -32,6 +51,11 @@ export async function signUp(
   }
   if (typeof password !== "string" || password.length < 8) {
     return { error: "Password must be at least 8 characters." };
+  }
+
+  const { success } = await authRateLimit.limit(await clientIp());
+  if (!success) {
+    return { error: RATE_LIMIT_MESSAGE };
   }
 
   const supabase = await createClient();
@@ -76,6 +100,11 @@ export async function signIn(
     return { error: "Password is required." };
   }
 
+  const { success } = await authRateLimit.limit(await clientIp());
+  if (!success) {
+    return { error: RATE_LIMIT_MESSAGE };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
     email: email.trim(),
@@ -89,6 +118,60 @@ export async function signIn(
 
   // Redirect must happen outside the try/catch — redirect() throws internally.
   redirect(destination);
+}
+
+// ─── Password Reset ────────────────────────────────────────────────────────────
+
+export async function requestPasswordReset(
+  _state: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const email = formData.get("email");
+
+  if (typeof email !== "string" || !email.trim()) {
+    return { error: "Email is required." };
+  }
+
+  const { success } = await authRateLimit.limit(await clientIp());
+  if (!success) {
+    return { error: RATE_LIMIT_MESSAGE };
+  }
+
+  const supabase = await createClient();
+  // The recovery link lands on /auth/callback, which exchanges the code for a
+  // session, then forwards to /auth/reset-password to set the new password.
+  await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/auth/reset-password`,
+  });
+
+  // Always return the same generic message regardless of whether the email
+  // exists, to avoid leaking which addresses are registered.
+  return {
+    message:
+      "If an account exists for that email, a password reset link is on its way.",
+  };
+}
+
+export async function updatePassword(
+  _state: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const password = formData.get("password");
+
+  if (typeof password !== "string" || password.length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+
+  const supabase = await createClient();
+  // A valid recovery session must already exist (set by /auth/callback after
+  // exchanging the recovery code). updateUser fails if there is no session.
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  redirect("/dashboard");
 }
 
 // ─── Sign Out ─────────────────────────────────────────────────────────────────
