@@ -18,6 +18,7 @@ import {
   FileDown,
   Building2,
   Plus,
+  TrendingUp,
 } from "lucide-react"
 
 import {
@@ -47,6 +48,7 @@ const globalTools = [
 const projectCoreNav = [
   { title: "Overview",          suffix: "",          icon: Gauge },
   { title: "Search Visibility", suffix: "/seo",      icon: Search },
+  { title: "Rankings",          suffix: "/rankings", icon: TrendingUp },
   { title: "Animation",         suffix: "/animation", icon: Sparkles },
   { title: "Reports",           suffix: "/report",   icon: FileDown },
   { title: "Settings",          suffix: "/settings", icon: Settings },

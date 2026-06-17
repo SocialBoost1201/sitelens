@@ -625,6 +625,94 @@ export type Database = {
           },
         ]
       }
+      TrackedKeyword: {
+        Row: {
+          country: string
+          createdAt: string
+          device: Database["public"]["Enums"]["RankDevice"]
+          enabled: boolean
+          id: string
+          keyword: string
+          language: string
+          lastCheckedAt: string | null
+          lastPosition: number | null
+          projectId: string
+          targetUrl: string
+        }
+        Insert: {
+          country?: string
+          createdAt?: string
+          device?: Database["public"]["Enums"]["RankDevice"]
+          enabled?: boolean
+          id: string
+          keyword: string
+          language?: string
+          lastCheckedAt?: string | null
+          lastPosition?: number | null
+          projectId: string
+          targetUrl: string
+        }
+        Update: {
+          country?: string
+          createdAt?: string
+          device?: Database["public"]["Enums"]["RankDevice"]
+          enabled?: boolean
+          id?: string
+          keyword?: string
+          language?: string
+          lastCheckedAt?: string | null
+          lastPosition?: number | null
+          projectId?: string
+          targetUrl?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "TrackedKeyword_projectId_fkey"
+            columns: ["projectId"]
+            isOneToOne: false
+            referencedRelation: "Project"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      KeywordRankSnapshot: {
+        Row: {
+          capturedAt: string
+          id: string
+          keywordId: string
+          position: number | null
+          rankedUrl: string | null
+          serpFeatures: Json
+          source: string
+        }
+        Insert: {
+          capturedAt?: string
+          id: string
+          keywordId: string
+          position?: number | null
+          rankedUrl?: string | null
+          serpFeatures?: Json
+          source: string
+        }
+        Update: {
+          capturedAt?: string
+          id?: string
+          keywordId?: string
+          position?: number | null
+          rankedUrl?: string | null
+          serpFeatures?: Json
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "KeywordRankSnapshot_keywordId_fkey"
+            columns: ["keywordId"]
+            isOneToOne: false
+            referencedRelation: "TrackedKeyword"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       SeoResult: {
         Row: {
           analyzedAt: string
@@ -769,6 +857,7 @@ export type Database = {
         | "BROKEN_LINKS_FOUND"
         | "SECURITY_GRADE_DROP"
       ProjectRole: "ANALYST" | "VIEWER"
+      RankDevice: "DESKTOP" | "MOBILE"
       UptimeStatus: "UP" | "DOWN" | "DEGRADED"
     }
     CompositeTypes: {
@@ -918,6 +1007,7 @@ export const Constants = {
         "SECURITY_GRADE_DROP",
       ],
       ProjectRole: ["ANALYST", "VIEWER"],
+      RankDevice: ["DESKTOP", "MOBILE"],
       UptimeStatus: ["UP", "DOWN", "DEGRADED"],
     },
   },

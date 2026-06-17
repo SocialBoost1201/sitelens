@@ -226,3 +226,27 @@ Sample (verify unit price with provider):
 4. API routes (§4) + `/api/cron/rank-fetch` (fail-closed).
 5. Dashboard page + sidebar nav + trend chart + improvement-actions panel.
 6. Verify (lint/build/E2E smoke); no change to existing axis logic.
+
+---
+
+## 10. Environment Variables
+
+Set these in the deployment environment (Vercel) / local `.env.local`. **Never commit real
+values or secrets** — names and purpose only are documented here. (`.env.example` is
+protected from edits in this workspace, so the canonical list lives here.)
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `DATAFORSEO_LOGIN` | yes (for live fetch) | DataForSEO API login (Basic auth). Provider credential. |
+| `DATAFORSEO_PASSWORD` | yes (for live fetch) | DataForSEO API password (Basic auth). Provider credential. |
+| `RANK_PROVIDER` | no (default `dataforseo`) | Active rank provider id. Swap providers without code changes. |
+| `RANK_PLAN_TIER` | no (default `internal`) | Active plan tier: `internal` / `starter` / `pro` / `agency`. |
+| `RANK_LIMIT_INTERNAL` | no (default `10`) | Max tracked keywords per project — internal tier. |
+| `RANK_LIMIT_STARTER` | no (default `50`) | Max tracked keywords per project — starter tier. |
+| `RANK_LIMIT_PRO` | no (default `200`) | Max tracked keywords per project — pro tier. |
+| `RANK_LIMIT_AGENCY` | no (default `1000`) | Max tracked keywords per account — agency tier. |
+| `RANK_FETCH_CADENCE_HOURS` | no (default `168`) | Cron fetch cadence in hours (168 = weekly). |
+| `CRON_SECRET` | yes | Bearer secret for `/api/cron/rank-fetch` (shared with existing cron routes). |
+
+> Credentials are read from env only and are never hardcoded; if `DATAFORSEO_*` are absent,
+> the adapter throws a clear error (no silent failure).
